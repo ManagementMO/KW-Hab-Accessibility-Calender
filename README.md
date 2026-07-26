@@ -32,12 +32,6 @@ npm run build
 
 `Easy Read` is the default, `Audio First` makes speech controls prominent and slower, and `PECS mode` turns the home choice flow into picture-only cards. The prototype uses browser speech synthesis and hard-coded demonstration data.
 
-## Standalone Judge Demos
-
-Open these directly in Chrome, or serve the repository with any static file server. They have no dependencies:
-
-- `demos/extension.html`: Belonging Lens turns a dense event listing into a one-screen accessible summary. Use the yellow activation button, then try Listen, Easy Read, Picture Mode, Save, and Ask a question.
-- `demos/whatsapp.html`: Community Companion shows a full WhatsApp reminder flow. Use the input to try `quiet`, `bus`, `help`, or `french`.
 
 ## Boundaries
 
