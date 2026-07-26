@@ -1,6 +1,6 @@
 # Belonging Loop
 
-A polished frontend prototype for the Impact-A-Thon concept in [BELONGING-LOOP.md](./BELONGING-LOOP.md). It demonstrates a truthful, privacy-aware path from an individual's event wish to event preparation, a private event circle, and coordinator-reviewed support options.
+A polished frontend prototype for concept in [BELONGING-LOOP.md](./BELONGING-LOOP.md). It demonstrates a truthful, privacy-aware path from an individual's event wish to event preparation, a private event circle, and coordinator-reviewed support options.
 
 ## Run locally
 
