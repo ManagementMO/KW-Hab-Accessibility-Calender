@@ -46,7 +46,7 @@ describe('login', () => {
 
 describe('getSession', () => {
   it('returns null when there is no session', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 401 })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: 'Not authenticated' }) })
     vi.stubGlobal('fetch', fetchMock)
     expect(await getSession()).toBeNull()
   })

@@ -32,26 +32,15 @@ export type Event = {
 
 export type NewEventInput = Omit<Event, 'id'>
 
-async function parseOrThrow(response: Response) {
-  let data = {}
-  try {
-    data = await response.json()
-  } catch {
-    // Ignore errors
-  }
-
-  if (response.status === 401) {
-    if (data.error) throw new Error(data.error)
-    return null
-  }
-
+async function parseJsonOrThrow(response: Response): Promise<any> {
+  const data = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(data.error || `Request failed with status ${response.status}`)
   return data
 }
 
 export async function getEvents(): Promise<Event[]> {
   const response = await fetch('/api/events')
-  return parseOrThrow(response)
+  return parseJsonOrThrow(response)
 }
 
 export async function createEvent(input: NewEventInput): Promise<Event> {
@@ -60,7 +49,7 @@ export async function createEvent(input: NewEventInput): Promise<Event> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
-  return parseOrThrow(response)
+  return parseJsonOrThrow(response)
 }
 
 export async function login(email: string, password: string): Promise<{ ok: true; email: string }> {
@@ -69,7 +58,7 @@ export async function login(email: string, password: string): Promise<{ ok: true
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  return parseOrThrow(response)
+  return parseJsonOrThrow(response)
 }
 
 export async function logout(): Promise<void> {
@@ -78,5 +67,6 @@ export async function logout(): Promise<void> {
 
 export async function getSession(): Promise<{ ok: true; email: string } | null> {
   const response = await fetch('/api/auth/me')
-  return parseOrThrow(response)
+  if (response.status === 401) return null
+  return parseJsonOrThrow(response)
 }
