@@ -1,14 +1,23 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import * as api from './lib/api'
 
 afterEach(cleanup)
+afterEach(() => { localStorage.clear(); vi.restoreAllMocks() })
+
+async function enterAsParticipant(user: ReturnType<typeof userEvent.setup>) {
+  vi.spyOn(api, 'getSession').mockResolvedValue(null)
+  vi.spyOn(api, 'getEvents').mockResolvedValue([])
+  render(<App />)
+  await user.click(await screen.findByRole('button', { name: /i'm a participant/i }))
+}
 
 describe('Belonging Loop accessible calendar', () => {
-  it('starts with one visual onboarding decision', async () => {
+  it('starts with the participant/staff choice, then one visual onboarding decision', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    await enterAsParticipant(user)
 
     expect(screen.getByRole('heading', { name: 'How do you like to use this app?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /pictures/i }))
@@ -17,10 +26,21 @@ describe('Belonging Loop accessible calendar', () => {
 
   it('opens a recommended event and saves it to My Week', async () => {
     const user = userEvent.setup()
+    vi.spyOn(api, 'getSession').mockResolvedValue(null)
+    vi.spyOn(api, 'getEvents').mockResolvedValue([{
+      id: 'nature', title: 'Accessible Nature Walk', category: 'Outdoors', day: 'Saturday', time: '10:00 AM - 11:30 AM',
+      place: 'Waterloo Park', cost: 'Free', bus: 'Route 7 stops nearby', group: 'Small group', noise: 'Quiet',
+      access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Step-free path' },
+      support: 'Mobility support can be requested', registration: 'Sign up first', image: 'https://example.com/a.jpg',
+      reason: 'Recommended because you like outdoor activities and small groups.', short: 'A calm walk with time for breaks.',
+      plain: 'We will walk together.',
+      arrival: [{ icon: '🚪', title: 'Enter by the park gate', detail: 'Use the wide gate beside the bus stop.', image: 'https://example.com/b.jpg' }],
+    }])
     render(<App />)
+    await user.click(await screen.findByRole('button', { name: /i'm a participant/i }))
 
     await user.click(screen.getByRole('button', { name: /skip setup/i }))
-    await user.click(screen.getByRole('button', { name: 'Accessible Nature Walk' }))
+    await user.click(await screen.findByRole('button', { name: 'Accessible Nature Walk' }))
     expect(screen.getByRole('heading', { name: 'Accessible Nature Walk' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /(?:save|saved) to my week/i }))
@@ -30,8 +50,7 @@ describe('Belonging Loop accessible calendar', () => {
 
   it('switches to PECS choices without requiring typing', async () => {
     const user = userEvent.setup()
-    render(<App />)
-
+    await enterAsParticipant(user)
     await user.click(screen.getByRole('button', { name: /skip setup/i }))
     await user.click(screen.getByRole('button', { name: 'PECS mode' }))
     expect(screen.getByText('PECS is ON')).toBeInTheDocument()
@@ -41,8 +60,7 @@ describe('Belonging Loop accessible calendar', () => {
 
   it('shows a slowed audio state when a speaker control is used', async () => {
     const user = userEvent.setup()
-    render(<App />)
-
+    await enterAsParticipant(user)
     await user.click(screen.getByRole('button', { name: /skip setup/i }))
     await user.click(screen.getByRole('button', { name: 'Listen' }))
     await user.click(screen.getByRole('button', { name: 'Listen to Home' }))
@@ -51,12 +69,49 @@ describe('Belonging Loop accessible calendar', () => {
 
   it('opens one color vision choice screen', async () => {
     const user = userEvent.setup()
-    render(<App />)
-
+    await enterAsParticipant(user)
     await user.click(screen.getByRole('button', { name: /skip setup/i }))
     await user.click(screen.getByRole('button', { name: 'Color' }))
     expect(screen.getByRole('heading', { name: 'Choose your vision type' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /red-green/i }))
     expect(document.documentElement.dataset.colorMode).toBe('red-green')
+  })
+
+  it('shows an empty state instead of hard-coded events when the database has none', async () => {
+    const user = userEvent.setup()
+    await enterAsParticipant(user)
+    await user.click(screen.getByRole('button', { name: /skip setup/i }))
+    expect(await screen.findByText('No events at this time.')).toBeInTheDocument()
+  })
+
+  it('lets staff log in and reach the staff screen, skipping the participant flow', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(api, 'getSession').mockResolvedValue(null)
+    vi.spyOn(api, 'login').mockResolvedValue({ ok: true, email: 'staff@kwhab.ca' })
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: /i'm staff/i }))
+    await user.type(screen.getByLabelText(/email/i), 'staff@kwhab.ca')
+    await user.type(screen.getByLabelText(/password/i), 'correct-password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    expect(await screen.findByRole('heading', { name: 'Event workspace' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'How do you like to use this app?' })).not.toBeInTheDocument()
+  })
+
+  it('shows an inline error on failed staff login and allows retry', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(api, 'getSession').mockResolvedValue(null)
+    vi.spyOn(api, 'login').mockRejectedValue(new Error('Incorrect email or password'))
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: /i'm staff/i }))
+    await user.type(screen.getByLabelText(/email/i), 'staff@kwhab.ca')
+    await user.type(screen.getByLabelText(/password/i), 'wrong')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect email or password')
+  })
+
+  it('resumes a staff session directly into the staff screen on reload', async () => {
+    vi.spyOn(api, 'getSession').mockResolvedValue({ ok: true, email: 'staff@kwhab.ca' })
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Event workspace' })).toBeInTheDocument()
   })
 })
