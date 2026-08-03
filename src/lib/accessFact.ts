@@ -17,5 +17,15 @@ export function accessSearchText(access: AccessFact): string {
 
 export function accessSuggestsStepFree(access: AccessFact): boolean {
   const text = accessSearchText(access)
-  return text.includes('step') || text.includes('ramp')
+  const NEGATION = /\b(no|not|without|non|isn't|aren't|lacking)\b/
+  const targetPattern = /\b(step|ramp)\w*/g
+  let match: RegExpExecArray | null
+  let foundAffirmative = false
+  while ((match = targetPattern.exec(text))) {
+    const windowStart = Math.max(0, match.index - 20)
+    const windowEnd = Math.min(text.length, match.index + match[0].length + 20)
+    const window = text.slice(windowStart, windowEnd)
+    if (!NEGATION.test(window)) foundAffirmative = true
+  }
+  return foundAffirmative
 }

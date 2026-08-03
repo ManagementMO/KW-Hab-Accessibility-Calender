@@ -28,4 +28,19 @@ describe('accessSuggestsStepFree', () => {
   it('is false otherwise', () => {
     expect(accessSuggestsStepFree(notKnown)).toBe(false)
   })
+
+  it('is false when step/ramp language is negated', () => {
+    const negatedSteps = { status: 'not_known' as const, owner: 'KW Hab staff', lastConfirmed: '2026-07-01', note: 'steps at entrance, no ramp' }
+    expect(accessSuggestsStepFree(negatedSteps)).toBe(false)
+  })
+
+  it('is false when a step-free claim is itself negated', () => {
+    const notAvailable = { status: 'not_known' as const, owner: 'KW Hab staff', lastConfirmed: '2026-07-01', note: 'step-free route not available' }
+    expect(accessSuggestsStepFree(notAvailable)).toBe(false)
+  })
+
+  it('is still true for genuine affirmative phrasing', () => {
+    const rampConfirmed = { status: 'confirmed' as const, owner: 'KW Hab staff', lastConfirmed: '2026-07-01', note: 'Ramp entrance confirmed' }
+    expect(accessSuggestsStepFree(rampConfirmed)).toBe(true)
+  })
 })
