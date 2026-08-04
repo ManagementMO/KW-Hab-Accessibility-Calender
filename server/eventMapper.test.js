@@ -1,0 +1,64 @@
+import { describe, expect, it } from 'vitest'
+import { eventInputToRow, rowToEvent, validateEventInput } from './eventMapper.js'
+
+const sampleInput = {
+  title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', time: '2:00 PM - 3:30 PM',
+  place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
+  access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
+  support: 'Staff support available', registration: 'Yes, just come', image: 'https://example.com/a.jpg',
+  reason: 'Recommended because you like making things in a calm room.', short: 'Paint, draw, or make a craft.',
+  plain: 'We will make art together.',
+  arrival: [{ icon: '🚪', title: 'Use the front door', detail: 'The door has a flat entrance.', image: 'https://example.com/b.jpg' }],
+  journey: { route: 'Bus 4 to Victoria Hills', leave: 'Leaves at 1:26 PM', duration: '14 min', steps: ['Leave home', 'Bus 4'] },
+}
+
+describe('eventInputToRow / rowToEvent round trip', () => {
+  it('maps a full input to a row and back to an equivalent Event', () => {
+    const row = eventInputToRow(sampleInput, 'abc-123', '2026-08-02T00:00:00.000Z')
+    expect(row.id).toBe('abc-123')
+    expect(row.group_label).toBe('12 people')
+    expect(row.access_status).toBe('reported')
+    expect(row.access_note).toBe('Indoor and step-free')
+
+    const event = rowToEvent(row)
+    expect(event).toEqual({
+      id: 'abc-123', ...sampleInput,
+    })
+  })
+
+  it('maps a row with no journey to an event with journey undefined', () => {
+    const row = eventInputToRow({ ...sampleInput, journey: undefined }, 'abc-124', '2026-08-02T00:00:00.000Z')
+    expect(row.journey).toBeNull()
+    const event = rowToEvent(row)
+    expect(event.journey).toBeUndefined()
+  })
+})
+
+describe('validateEventInput', () => {
+  it('returns no errors for a complete input', () => {
+    expect(validateEventInput(sampleInput)).toEqual([])
+  })
+
+  it('flags every missing required text field', () => {
+    const errors = validateEventInput({ ...sampleInput, title: '', place: '   ' })
+    expect(errors).toContain('title is required')
+    expect(errors).toContain('place is required')
+  })
+
+  it('flags an invalid access status', () => {
+    const errors = validateEventInput({ ...sampleInput, access: { ...sampleInput.access, status: 'certified' } })
+    expect(errors).toContain('access.status must be confirmed, reported, or not_known')
+  })
+
+  it('flags a missing access owner or last-confirmed date', () => {
+    const errors = validateEventInput({ ...sampleInput, access: { ...sampleInput.access, owner: '', lastConfirmed: '' } })
+    expect(errors).toContain('access.owner is required')
+    expect(errors).toContain('access.lastConfirmed is required')
+  })
+
+  it('flags an empty or incomplete arrival list', () => {
+    expect(validateEventInput({ ...sampleInput, arrival: [] })).toContain('at least one arrival step is required')
+    expect(validateEventInput({ ...sampleInput, arrival: [{ icon: '🚪', title: '', detail: 'x', image: 'y' }] }))
+      .toContain('each arrival step needs icon, title, detail, and image')
+  })
+})

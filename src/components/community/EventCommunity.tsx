@@ -1,6 +1,6 @@
 import { Camera, Check, Heart, MessageCircle, Send, ShieldCheck, X } from 'lucide-react'
 import { useState } from 'react'
-import { Event } from '../../lib/events'
+import { Event } from '../../lib/api'
 import { Language, ListenButton } from '../accessibility/ListenButton'
 
 const photos = [
