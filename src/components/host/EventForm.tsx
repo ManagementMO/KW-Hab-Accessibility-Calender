@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { createEvent, type ArrivalStep, type Event, type Journey } from '../../lib/api'
+import { suggestArrivalIcon } from '../../lib/arrivalIcon'
 
 const emptyArrivalStep: ArrivalStep = { icon: '', title: '', detail: '', image: '' }
 const emptyJourney: Journey = { route: '', leave: '', duration: '', steps: [''] }
@@ -26,7 +27,7 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }))
 
-  const updateArrivalStep = (index: number, key: keyof ArrivalStep, value: string) =>
+  const updateArrivalStep = (index: number, key: 'title' | 'detail' | 'image', value: string) =>
     setForm((current) => ({ ...current, arrival: current.arrival.map((step, i) => (i === index ? { ...step, [key]: value } : step)) }))
   const addArrivalStep = () => setForm((current) => ({ ...current, arrival: [...current.arrival, { ...emptyArrivalStep }] }))
   const removeArrivalStep = (index: number) => setForm((current) => ({ ...current, arrival: current.arrival.filter((_, i) => i !== index) }))
@@ -41,14 +42,12 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
     const problems: string[] = []
     const required: [string, string][] = [
       ['title', form.title], ['category', form.category], ['day', form.day], ['time', form.time],
-      ['place', form.place], ['cost', form.cost], ['bus', form.bus], ['group', form.group],
-      ['noise', form.noise], ['support', form.support], ['image', form.image],
-      ['reason', form.reason], ['short', form.short], ['plain', form.plain],
+      ['place', form.place], ['cost', form.cost], ['plain', form.plain],
       ['access owner', form.accessOwner], ['access last confirmed', form.accessLastConfirmed],
     ]
     for (const [label, value] of required) if (!value.trim()) problems.push(`${label} is required`)
-    if (form.arrival.some((step) => !step.icon.trim() || !step.title.trim() || !step.detail.trim() || !step.image.trim())) {
-      problems.push('every arrival step needs an icon, title, detail, and image')
+    if (form.arrival.some((step) => !step.title.trim() || !step.detail.trim())) {
+      problems.push('every arrival step needs a title and detail')
     }
     return problems
   }
@@ -66,7 +65,7 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
         cost: form.cost, bus: form.bus, group: form.group, noise: form.noise, support: form.support,
         registration: form.registration, image: form.image, reason: form.reason, short: form.short, plain: form.plain,
         access: { status: form.accessStatus, owner: form.accessOwner, lastConfirmed: form.accessLastConfirmed, note: form.accessNote },
-        arrival: form.arrival,
+        arrival: form.arrival.map((step) => ({ ...step, icon: suggestArrivalIcon(step.title + ' ' + step.detail) })),
         journey: form.includeJourney ? form.journey : undefined,
       })
       setForm(initialForm)
@@ -86,19 +85,19 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
     <label>Time<input value={form.time} onChange={(event) => update('time', event.target.value)} /></label>
     <label>Place<input value={form.place} onChange={(event) => update('place', event.target.value)} /></label>
     <label>Cost<input value={form.cost} onChange={(event) => update('cost', event.target.value)} /></label>
-    <label>Bus<input value={form.bus} onChange={(event) => update('bus', event.target.value)} /></label>
-    <label>Group<input value={form.group} onChange={(event) => update('group', event.target.value)} /></label>
-    <label>Noise<input value={form.noise} onChange={(event) => update('noise', event.target.value)} /></label>
-    <label>Support<input value={form.support} onChange={(event) => update('support', event.target.value)} /></label>
+    <label>Bus (optional)<input value={form.bus} onChange={(event) => update('bus', event.target.value)} /></label>
+    <label>Group (optional)<input value={form.group} onChange={(event) => update('group', event.target.value)} /></label>
+    <label>Noise (optional)<input value={form.noise} onChange={(event) => update('noise', event.target.value)} /></label>
+    <label>Support (optional)<input value={form.support} onChange={(event) => update('support', event.target.value)} /></label>
     <label>Registration
       <select value={form.registration} onChange={(event) => update('registration', event.target.value as Event['registration'])}>
         <option value="Yes, just come">Yes, just come</option>
         <option value="Sign up first">Sign up first</option>
       </select>
     </label>
-    <label>Image URL<input value={form.image} onChange={(event) => update('image', event.target.value)} /></label>
-    <label>Recommendation reason<input value={form.reason} onChange={(event) => update('reason', event.target.value)} /></label>
-    <label>Short description<input value={form.short} onChange={(event) => update('short', event.target.value)} /></label>
+    <label>Image URL (optional)<input value={form.image} onChange={(event) => update('image', event.target.value)} /></label>
+    <label>Recommendation reason (optional)<input value={form.reason} onChange={(event) => update('reason', event.target.value)} /></label>
+    <label>Short description (optional)<input value={form.short} onChange={(event) => update('short', event.target.value)} /></label>
     <label>Plain-language description<textarea value={form.plain} onChange={(event) => update('plain', event.target.value)} /></label>
 
     <fieldset className="access-fields">
@@ -118,10 +117,10 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
     <fieldset className="arrival-fields">
       <legend>Arrival steps</legend>
       {form.arrival.map((step, index) => <div className="arrival-step-fields" key={index}>
-        <label>Icon<input value={step.icon} onChange={(event) => updateArrivalStep(index, 'icon', event.target.value)} /></label>
+        <span className="arrival-icon-preview" aria-label={'Icon for this step: ' + suggestArrivalIcon(step.title + ' ' + step.detail)}>{suggestArrivalIcon(step.title + ' ' + step.detail)}</span>
         <label>Title<input value={step.title} onChange={(event) => updateArrivalStep(index, 'title', event.target.value)} /></label>
         <label>Detail<input value={step.detail} onChange={(event) => updateArrivalStep(index, 'detail', event.target.value)} /></label>
-        <label>Image URL<input value={step.image} onChange={(event) => updateArrivalStep(index, 'image', event.target.value)} /></label>
+        <label>Image URL (optional)<input value={step.image} onChange={(event) => updateArrivalStep(index, 'image', event.target.value)} /></label>
         {form.arrival.length > 1 && <button type="button" onClick={() => removeArrivalStep(index)} aria-label={'Remove step ' + (index + 1)}><Trash2 size={16} /></button>}
       </div>)}
       <button type="button" onClick={addArrivalStep}><Plus size={16} />Add arrival step</button>

@@ -59,6 +59,21 @@ describe('validateEventInput', () => {
   it('flags an empty or incomplete arrival list', () => {
     expect(validateEventInput({ ...sampleInput, arrival: [] })).toContain('at least one arrival step is required')
     expect(validateEventInput({ ...sampleInput, arrival: [{ icon: '🚪', title: '', detail: 'x', image: 'y' }] }))
-      .toContain('each arrival step needs icon, title, detail, and image')
+      .toContain('each arrival step needs a title and detail')
+  })
+
+  it('allows bus, group, noise, support, image, reason, and short to be omitted', () => {
+    const { bus, group, noise, support, image, reason, short, ...rest } = sampleInput
+    expect(validateEventInput(rest)).toEqual([])
+  })
+
+  it('allows an arrival step with no image', () => {
+    const errors = validateEventInput({ ...sampleInput, arrival: [{ icon: '🚪', title: 'Use the door', detail: 'Flat entrance.' }] })
+    expect(errors).toEqual([])
+  })
+
+  it('flags an optional field that is present but not text', () => {
+    const errors = validateEventInput({ ...sampleInput, bus: 42 })
+    expect(errors).toContain('bus must be text')
   })
 })

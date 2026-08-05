@@ -1,4 +1,5 @@
-const REQUIRED_FIELDS = ['title', 'category', 'day', 'time', 'place', 'cost', 'bus', 'group', 'noise', 'support', 'registration', 'image', 'reason', 'short', 'plain']
+const REQUIRED_FIELDS = ['title', 'category', 'day', 'time', 'place', 'cost', 'registration', 'plain']
+const OPTIONAL_TEXT_FIELDS = ['bus', 'group', 'noise', 'support', 'image', 'reason', 'short']
 const ACCESS_STATUSES = ['confirmed', 'reported', 'not_known']
 
 export function rowToEvent(row) {
@@ -39,18 +40,18 @@ export function eventInputToRow(input, id, createdAt) {
     time: input.time,
     place: input.place,
     cost: input.cost,
-    bus: input.bus,
-    group_label: input.group,
-    noise: input.noise,
+    bus: input.bus || '',
+    group_label: input.group || '',
+    noise: input.noise || '',
     access_status: input.access.status,
     access_owner: input.access.owner,
     access_last_confirmed: input.access.lastConfirmed,
     access_note: input.access.note || '',
-    support: input.support,
+    support: input.support || '',
     registration: input.registration,
-    image: input.image,
-    reason: input.reason,
-    short: input.short,
+    image: input.image || '',
+    reason: input.reason || '',
+    short: input.short || '',
     plain: input.plain,
     arrival: JSON.stringify(input.arrival),
     journey: input.journey ? JSON.stringify(input.journey) : null,
@@ -64,6 +65,10 @@ export function validateEventInput(input) {
     const value = input[field]
     if (typeof value !== 'string' || !value.trim()) errors.push(`${field} is required`)
   }
+  for (const field of OPTIONAL_TEXT_FIELDS) {
+    const value = input[field]
+    if (value !== undefined && value !== null && typeof value !== 'string') errors.push(`${field} must be text`)
+  }
   if (!input.access || typeof input.access !== 'object') {
     errors.push('access is required')
   } else {
@@ -73,8 +78,8 @@ export function validateEventInput(input) {
   }
   if (!Array.isArray(input.arrival) || input.arrival.length === 0) {
     errors.push('at least one arrival step is required')
-  } else if (input.arrival.some((step) => !step.icon || !step.title || !step.detail || !step.image)) {
-    errors.push('each arrival step needs icon, title, detail, and image')
+  } else if (input.arrival.some((step) => !step.title || !step.detail)) {
+    errors.push('each arrival step needs a title and detail')
   }
   return errors
 }

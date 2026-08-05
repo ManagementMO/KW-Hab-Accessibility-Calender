@@ -7,30 +7,21 @@ import * as api from '../../lib/api'
 afterEach(cleanup)
 afterEach(() => { vi.restoreAllMocks() })
 
-async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
+async function fillMinimumRequiredFields(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Event name'), 'Community Art Afternoon')
   await user.type(screen.getByLabelText('Category'), 'Art')
   await user.type(screen.getByLabelText('Day'), 'Wednesday')
   await user.type(screen.getByLabelText('Time'), '2:00 PM - 3:30 PM')
   await user.type(screen.getByLabelText('Place'), 'Victoria Hills Centre')
   await user.type(screen.getByLabelText('Cost'), 'Free')
-  await user.type(screen.getByLabelText('Bus'), 'Route 4 at the door')
-  await user.type(screen.getByLabelText('Group'), '12 people')
-  await user.type(screen.getByLabelText('Noise'), 'Low noise')
-  await user.type(screen.getByLabelText('Support'), 'Staff support available')
-  await user.type(screen.getByLabelText('Image URL', { selector: 'form.event-form > label > input' }), 'https://example.com/a.jpg')
-  await user.type(screen.getByLabelText('Recommendation reason'), 'Recommended because you like art.')
-  await user.type(screen.getByLabelText('Short description'), 'Paint, draw, or make a craft.')
   await user.type(screen.getByLabelText('Plain-language description'), 'We will make art together.')
   await user.type(screen.getByLabelText('Owner'), 'KW Hab staff')
   const dateInput = screen.getByLabelText('Last confirmed')
   await user.clear(dateInput)
   await user.type(dateInput, '2026-07-10')
   const step = screen.getByText('Arrival steps').closest('fieldset') as HTMLElement
-  await user.type(within(step).getByLabelText('Icon'), '🚪')
   await user.type(within(step).getByLabelText('Title'), 'Use the front door')
   await user.type(within(step).getByLabelText('Detail'), 'The door has a flat entrance.')
-  await user.type(within(step).getByLabelText('Image URL', { selector: 'fieldset.arrival-fields input' }), 'https://example.com/b.jpg')
 }
 
 describe('EventForm', () => {
@@ -43,14 +34,14 @@ describe('EventForm', () => {
     expect(createEventSpy).not.toHaveBeenCalled()
   })
 
-  it('submits a complete form and calls onCreated', async () => {
+  it('submits with only the required fields filled, deriving the arrival icon automatically', async () => {
     const user = userEvent.setup()
     const created = { id: 'new-1', title: 'Community Art Afternoon' }
     vi.spyOn(api, 'createEvent').mockResolvedValue(created as any)
     const onCreated = vi.fn()
     render(<EventForm onCreated={onCreated} />)
 
-    await fillRequiredFields(user)
+    await fillMinimumRequiredFields(user)
     await user.click(screen.getByRole('button', { name: /create event/i }))
 
     expect(await screen.findByText(/event created/i)).toBeInTheDocument()
@@ -58,7 +49,19 @@ describe('EventForm', () => {
     const payload = (api.createEvent as any).mock.calls[0][0]
     expect(payload.title).toBe('Community Art Afternoon')
     expect(payload.access).toEqual({ status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: '' })
-    expect(payload.arrival).toHaveLength(1)
+    expect(payload.bus).toBe('')
+    expect(payload.image).toBe('')
+    expect(payload.arrival).toEqual([{ icon: '🚪', title: 'Use the front door', detail: 'The door has a flat entrance.', image: '' }])
     expect(payload.journey).toBeUndefined()
   }, 15000)
+
+  it('shows a live icon preview that updates as the arrival step text changes', async () => {
+    const user = userEvent.setup()
+    render(<EventForm onCreated={vi.fn()} />)
+    const step = screen.getByText('Arrival steps').closest('fieldset') as HTMLElement
+
+    expect(within(step).getByLabelText(/icon for this step: 📍/i)).toBeInTheDocument()
+    await user.type(within(step).getByLabelText('Title'), 'Ramp entrance')
+    expect(within(step).getByLabelText(/icon for this step: ♿/i)).toBeInTheDocument()
+  })
 })
