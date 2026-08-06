@@ -11,6 +11,40 @@ describe('openDb', () => {
     expect(tables).toEqual(expect.arrayContaining(['events', 'staff']))
   })
 
+  it('adds registration_url and created_by columns to the events table', () => {
+    const db = openDb(':memory:')
+    const columns = db.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
+    expect(columns).toEqual(expect.arrayContaining(['registration_url', 'created_by']))
+  })
+
+  it('backfills the new columns on a database created before they existed', () => {
+    const dbPath = path.join(os.tmpdir(), `db-migrate-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`)
+    let db1
+    let db2
+    try {
+      db1 = openDb(dbPath)
+      db1.exec('ALTER TABLE events DROP COLUMN registration_url')
+      db1.exec('ALTER TABLE events DROP COLUMN created_by')
+      let columns = db1.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
+      expect(columns).not.toEqual(expect.arrayContaining(['registration_url', 'created_by']))
+      db1.close()
+      db1 = null
+
+      db2 = openDb(dbPath)
+      columns = db2.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
+      expect(columns).toEqual(expect.arrayContaining(['registration_url', 'created_by']))
+      db2.close()
+      db2 = null
+    } finally {
+      if (db1) db1.close()
+      if (db2) db2.close()
+      for (const suffix of ['', '-journal', '-wal', '-shm']) {
+        const file = dbPath + suffix
+        if (fs.existsSync(file)) fs.rmSync(file)
+      }
+    }
+  })
+
   it('is idempotent when called twice on the same file', () => {
     const dbPath = path.join(os.tmpdir(), `db-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`)
     let db1

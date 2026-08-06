@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createEvent, getEvents, getSession, login, logout } from './api'
+import { createEvent, getEvents, getMyEvents, getSession, login, logout, updateEvent } from './api'
 
 const sampleEvent = { id: '1', title: 'Test Event' }
 
@@ -33,6 +33,37 @@ describe('createEvent', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({ error: 'title is required' }) })
     vi.stubGlobal('fetch', fetchMock)
     await expect(createEvent({} as any)).rejects.toThrow('title is required')
+  })
+})
+
+describe('updateEvent', () => {
+  it('patches the given event id with the input as JSON and returns the updated event', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => sampleEvent })
+    vi.stubGlobal('fetch', fetchMock)
+    const input = { title: 'Updated Title' } as any
+    const updated = await updateEvent('1', input)
+    expect(fetchMock).toHaveBeenCalledWith('/api/events/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    expect(updated).toEqual(sampleEvent)
+  })
+
+  it('throws the server error message on failure', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => ({ error: 'You can only edit events you created' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(updateEvent('1', {} as any)).rejects.toThrow('You can only edit events you created')
+  })
+})
+
+describe('getMyEvents', () => {
+  it('fetches and returns the events created by the logged-in staff account', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [sampleEvent] })
+    vi.stubGlobal('fetch', fetchMock)
+    const events = await getMyEvents()
+    expect(fetchMock).toHaveBeenCalledWith('/api/events/mine')
+    expect(events).toEqual([sampleEvent])
   })
 })
 

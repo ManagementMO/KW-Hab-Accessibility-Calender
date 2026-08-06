@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Accessibility, ArrowLeft, Bell, Bus, CalendarDays, Check, ChevronRight,
   CircleHelp, Clock3, Ear, Heart, Home, Image, MapPin, MessageCircle, Mic,
-  Paintbrush, Phone, Printer, Settings2, ShieldCheck,
+  Paintbrush, Pencil, Phone, Printer, Settings2, ShieldCheck,
   Sparkles, Star, Volume2, X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { Event, getEvents, getSession, logout as apiLogout } from './lib/api'
+import { Event, getEvents, getMyEvents, getSession, logout as apiLogout } from './lib/api'
 import { formatAccessFact } from './lib/accessFact'
 import { eventImageSrc } from './lib/eventDisplay'
+import { CATEGORIES } from './lib/categories'
 import { loadLanguage, loadMode, loadPecs, loadSaved, storeLanguage, storeMode, storePecs, storeSaved } from './lib/localStore'
 import { AccessibilityBar, ColorModePicker, ColorMode, ReadingMode } from './components/accessibility/AccessibilityBar'
 import { Language, ListenButton } from './components/accessibility/ListenButton'
@@ -25,11 +26,6 @@ import { EmptyState } from './components/features/EmptyState'
 
 type Tab = 'home' | 'recommended' | 'week' | 'calendar' | 'circle' | 'support'
 type Entry = 'checking' | 'participant' | 'staff-login' | 'staff'
-
-const categories = [
-  ['🎨', 'Art'], ['🌳', 'Outdoors'], ['🎵', 'Music'], ['🍳', 'Cooking'],
-  ['🏀', 'Sports'], ['🎉', 'Social'], ['🧘', 'Quiet'], ['🚌', 'Trips'],
-]
 
 const navItems: [LucideIcon, Tab, string][] = [
   [Home, 'home', 'Home'],
@@ -96,6 +92,8 @@ function App() {
   const [selected, setSelected] = useState<Event | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [eventsLoaded, setEventsLoaded] = useState(false)
+  const [myEvents, setMyEvents] = useState<Event[]>([])
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [saved, setSaved] = useState<string[]>(() => loadSaved())
   const [requested, setRequested] = useState<string | null>(null)
   const [accessibilityLens, setAccessibilityLens] = useState(false)
@@ -116,12 +114,21 @@ function App() {
     }
   }
 
+  const refreshMyEvents = async () => setMyEvents(await getMyEvents())
+
+  const handleEventSaved = () => {
+    refreshEvents()
+    refreshMyEvents()
+    setEditingEvent(null)
+  }
+
   useEffect(() => {
     getSession().then((session) => setEntry(session ? 'staff' : 'participant'))
   }, [])
 
   useEffect(() => {
     if (entry === 'participant') refreshEvents()
+    if (entry === 'staff') refreshMyEvents()
   }, [entry])
 
   useEffect(() => {
@@ -135,7 +142,7 @@ function App() {
   useEffect(() => { storePecs(pecs) }, [pecs])
   useEffect(() => { storeLanguage(language) }, [language])
 
-  const handleStaffLogout = async () => { await apiLogout(); setEntry('participant') }
+  const handleStaffLogout = async () => { await apiLogout(); setEditingEvent(null); setEntry('participant') }
 
   const header = <>
     <a className="skip-link" href="#main-content">Skip to main content</a>
@@ -154,7 +161,7 @@ function App() {
   const renderHome = () => <section className="screen home-screen">
     <div className="welcome-row"><div><p className="eyebrow">YOUR COMMUNITY EVENTS</p><h1>{pecs ? 'Tap a picture' : 'What would you like to do?'}</h1><p>{pecs ? 'Choose one picture.' : 'Pick a picture. We will show a few good events.'}</p></div><ListenButton text="What would you like to do? Pick a picture. We will show good events." label="Home" slow={slow} /></div>
     <button className="say-wish" onClick={() => setTab('recommended')}><span><Mic size={29} /></span><div><strong>{pecs ? '🎤' : 'Tell us with your voice'}</strong><small>{pecs ? 'Tap to talk' : 'Say what you want to do'}</small></div><ChevronRight size={22} /></button>
-    <div className="category-grid" aria-label="Event categories">{categories.map(([emoji, title]) => <button key={title} onClick={() => setTab('recommended')} aria-label={title}><span>{emoji}</span><strong>{pecs ? '' : title}</strong></button>)}</div>
+    <div className="category-grid" aria-label="Event categories">{CATEGORIES.map(({ emoji, name }) => <button key={name} onClick={() => setTab('recommended')} aria-label={name}><span>{emoji}</span><strong>{pecs ? '' : name}</strong></button>)}</div>
     <section className="next-event"><div><p className="eyebrow">COMING UP</p><h2>Coming up</h2><p>{events.length > 0 ? 'One event is ready to explore.' : 'Check back soon for new events.'}</p></div>{events.length > 0 ? <EventCard event={events[0]} onOpen={openEvent} compact slow={slow} /> : <EmptyState mode={mode} pecs={pecs} language={language} slow={slow} />}</section><button className="home-about-link" onClick={() => setTab('support')} aria-label="Learn about KW Habilitation"><img src="/kwhab-logo.jpeg" alt="" /><span><strong>About KW Habilitation</strong><small>How we help people live, work, and belong.</small></span><ChevronRight size={22} /></button>
   </section>
 
@@ -162,7 +169,7 @@ function App() {
     <button className="back-button" onClick={() => setSelected(null)}><ArrowLeft size={19} />Back to events</button>
     <HostProfile slow={slow} language={language} />
     <div className="detail-hero"><img src={eventImageSrc(selected.image)} alt={selected.title + ' event'} /><div><p className="eyebrow">{selected.category}</p><h1>{selected.title}</h1><p>{mode === 'standard' ? (selected.short || selected.plain) : selected.plain}</p><ListenButton text={selected.plain} label={selected.title + ' description'} slow={slow} language={language} /></div></div>
-    <div className="detail-actions"><StatusBadge state={selected.registration} /><button className="save-button" onClick={() => save(selected)}>{saved.includes(selected.id) ? <Check size={20} /> : <CalendarDays size={20} />}{saved.includes(selected.id) ? 'Saved to My Week' : 'Save to My Week'}</button><a className="event-cta" href="https://kwhab.ca/" target="_blank" rel="noreferrer">Register / Learn more</a><button className="event-cta" onClick={() => setTab('circle')}>Join Community</button></div>
+    <div className="detail-actions"><StatusBadge state={selected.registration} /><button className="save-button" onClick={() => save(selected)}>{saved.includes(selected.id) ? <Check size={20} /> : <CalendarDays size={20} />}{saved.includes(selected.id) ? 'Saved to My Week' : 'Save to My Week'}</button>{selected.registration === 'Sign up first' && selected.registrationUrl ? <a className="event-cta" href={selected.registrationUrl} target="_blank" rel="noreferrer">Register here</a> : <a className="event-cta" href="https://kwhab.ca/" target="_blank" rel="noreferrer">Learn more</a>}<button className="event-cta" onClick={() => setTab('circle')}>Join Community</button></div>
     {selected.reason && <p className="recommendation detail-reason"><Sparkles size={18} />{selected.reason}</p>}
     <div className="lens-row"><button className={accessibilityLens ? 'lens-button active' : 'lens-button'} onClick={() => setAccessibilityLens(!accessibilityLens)} aria-pressed={accessibilityLens}><Accessibility size={20} />Accessibility Lens</button>{accessibilityLens && <div className="lens-summary"><span>🚪 {formatAccessFact(selected.access)}</span>{selected.bus && <span>🚌 {selected.bus}</span>}{selected.group && <span>👥 {selected.group}</span>}</div>}</div>
     {!accessibilityLens && <SymbolStrip event={selected} />}
@@ -177,7 +184,7 @@ function App() {
 
   const renderSupport = () => about ? <AboutKWHab onBack={() => setAbout(false)} slow={slow} language={language} /> : <section className="screen support-screen"><div className="welcome-row"><div><p className="eyebrow">SUPPORT</p><h1>What help would be useful?</h1><p>Pick one kind of help. A staff person will talk with you.</p></div><ListenButton text="What help would be useful? Pick one kind of help. A staff person will talk with you." label="support options" slow={slow} /></div><div className="support-grid">{supportCards.map(([Icon, title, detail, staff, status]) => <article key={title}><div className="support-icon"><Icon size={30} /></div><h2>{title}</h2><p>{detail}</p><span>{staff}</span><small>{status}</small><button onClick={() => setRequested(title)}>{requested === title ? <Check size={18} /> : <Phone size={18} />}{requested === title ? 'Help request sent' : 'Ask for help'}</button></article>)}</div><section className="belonging-tap"><strong>🟡 BELONGING TAP</strong><h2>Tap a poster to find events.</h2><p>No app. No account. Just tap.</p><p>📚 Libraries · 🏥 Hospitals · 🚌 Bus stations · 🏠 Group homes</p><button>See where posters are →</button></section><section className="about-preview"><h2>About KW Habilitation</h2><p>We help people of all abilities live, work, and belong.</p><button onClick={() => setAbout(true)}>Learn more →</button></section><p className="support-footer"><CircleHelp size={18} />This is a request, not a booking. Staff will confirm what is possible.</p></section>
 
-  const renderStaff = () => <section className="staff-screen"><header><div><p className="eyebrow">STAFF TOOLS · PROTOTYPE ONLY</p><h1>Event workspace</h1><p>Detailed tools stay separate from the participant calendar.</p></div></header><div className="staff-grid"><article><h2>1. Event details</h2><EventForm onCreated={() => refreshEvents()} /></article><article><h2>2. Arrival and access</h2><p><Image size={18} />4 arrival photos ready</p><p><Check size={18} />Step-free path: reported Jul 10</p><p><CircleHelp size={18} />Quiet bench: confirmed by host</p><button>Update access facts</button></article><article><h2>3. Moderation queue</h2><p><MessageCircle size={18} />2 chat messages pending</p><p>"Is there a quiet room?" — J</p><p>"Can I bring my mom?" — A</p><button>Open moderation</button></article><article><h2>4. Support coordination</h2><p><Accessibility size={18} />Jordan: mobility support</p><p><Bus size={18} />Route 7 transport information</p><p><ShieldCheck size={18} />No support is assigned automatically</p><button>Review support requests</button></article></div><StaffOperations /></section>
+  const renderStaff = () => <section className="staff-screen"><header><div><p className="eyebrow">STAFF TOOLS · PROTOTYPE ONLY</p><h1>Event workspace</h1><p>Detailed tools stay separate from the participant calendar.</p></div></header><section className="my-events-panel"><h2>My events</h2><p>Events you created. You can only edit your own.</p>{myEvents.length === 0 ? <p className="my-events-empty">You haven't created any events yet.</p> : <ul className="my-events-list">{myEvents.map((event) => <li key={event.id}><span>{event.title}</span><button type="button" onClick={() => setEditingEvent(event)} disabled={editingEvent?.id === event.id}><Pencil size={15} />{editingEvent?.id === event.id ? 'Editing…' : 'Edit'}</button></li>)}</ul>}</section><div className="staff-grid"><article><h2>1. Event details</h2>{editingEvent && <p className="editing-banner">Editing "{editingEvent.title}" <button type="button" className="text-action" onClick={() => setEditingEvent(null)}>Cancel edit</button></p>}<EventForm key={editingEvent?.id ?? 'new'} event={editingEvent ?? undefined} onSaved={handleEventSaved} /></article><article><h2>2. Arrival and access</h2><p><Image size={18} />4 arrival photos ready</p><p><Check size={18} />Step-free path: reported Jul 10</p><p><CircleHelp size={18} />Quiet bench: confirmed by host</p><button>Update access facts</button></article><article><h2>3. Moderation queue</h2><p><MessageCircle size={18} />2 chat messages pending</p><p>"Is there a quiet room?" — J</p><p>"Can I bring my mom?" — A</p><button>Open moderation</button></article><article><h2>4. Support coordination</h2><p><Accessibility size={18} />Jordan: mobility support</p><p><Bus size={18} />Route 7 transport information</p><p><ShieldCheck size={18} />No support is assigned automatically</p><button>Review support requests</button></article></div><StaffOperations /></section>
 
   if (entry === 'checking') return <div className="app-shell loading-shell"><p>Loading…</p></div>
   if (entry === 'staff-login') return <StaffLogin onSuccess={() => setEntry('staff')} onBack={() => setEntry('participant')} />

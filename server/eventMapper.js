@@ -22,16 +22,18 @@ export function rowToEvent(row) {
     },
     support: row.support,
     registration: row.registration,
+    registrationUrl: row.registration_url,
     image: row.image,
     reason: row.reason,
     short: row.short,
     plain: row.plain,
     arrival: JSON.parse(row.arrival),
     journey: row.journey ? JSON.parse(row.journey) : undefined,
+    createdBy: row.created_by,
   }
 }
 
-export function eventInputToRow(input, id, createdAt) {
+export function eventInputToRow(input, id, createdAt, createdBy) {
   return {
     id,
     title: input.title,
@@ -49,6 +51,7 @@ export function eventInputToRow(input, id, createdAt) {
     access_note: input.access.note || '',
     support: input.support || '',
     registration: input.registration,
+    registration_url: input.registrationUrl || '',
     image: input.image || '',
     reason: input.reason || '',
     short: input.short || '',
@@ -56,6 +59,7 @@ export function eventInputToRow(input, id, createdAt) {
     arrival: JSON.stringify(input.arrival),
     journey: input.journey ? JSON.stringify(input.journey) : null,
     created_at: createdAt,
+    created_by: createdBy,
   }
 }
 
@@ -68,6 +72,9 @@ export function validateEventInput(input) {
   for (const field of OPTIONAL_TEXT_FIELDS) {
     const value = input[field]
     if (value !== undefined && value !== null && typeof value !== 'string') errors.push(`${field} must be text`)
+  }
+  if (input.registration === 'Sign up first' && (!input.registrationUrl || !input.registrationUrl.trim())) {
+    errors.push('registrationUrl is required when registration is "Sign up first"')
   }
   if (!input.access || typeof input.access !== 'object') {
     errors.push('access is required')

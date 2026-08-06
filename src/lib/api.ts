@@ -22,15 +22,17 @@ export type Event = {
   access: AccessFact
   support: string
   registration: 'Sign up first' | 'Yes, just come'
+  registrationUrl: string
   image: string
   reason: string
   short: string
   plain: string
   arrival: ArrivalStep[]
   journey?: Journey
+  createdBy: string
 }
 
-export type NewEventInput = Omit<Event, 'id'>
+export type NewEventInput = Omit<Event, 'id' | 'createdBy'>
 
 async function parseJsonOrThrow(response: Response): Promise<any> {
   const data = await response.json().catch(() => ({}))
@@ -49,6 +51,20 @@ export async function createEvent(input: NewEventInput): Promise<Event> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
+  return parseJsonOrThrow(response)
+}
+
+export async function updateEvent(id: string, input: NewEventInput): Promise<Event> {
+  const response = await fetch(`/api/events/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  return parseJsonOrThrow(response)
+}
+
+export async function getMyEvents(): Promise<Event[]> {
+  const response = await fetch('/api/events/mine')
   return parseJsonOrThrow(response)
 }
 

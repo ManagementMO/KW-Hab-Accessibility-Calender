@@ -35,9 +35,16 @@ CREATE TABLE IF NOT EXISTS staff (
 );
 `
 
+function migrate(db) {
+  const columns = db.prepare("PRAGMA table_info(events)").all().map((column) => column.name)
+  if (!columns.includes('registration_url')) db.exec('ALTER TABLE events ADD COLUMN registration_url TEXT NOT NULL DEFAULT \'\'')
+  if (!columns.includes('created_by')) db.exec('ALTER TABLE events ADD COLUMN created_by TEXT NOT NULL DEFAULT \'\'')
+}
+
 export function openDb(path) {
   const db = new Database(path)
   if (path !== ':memory:') db.pragma('journal_mode = WAL')
   db.exec(SCHEMA)
+  migrate(db)
   return db
 }

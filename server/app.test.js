@@ -24,6 +24,7 @@ describe('app', () => {
     db = openDb(':memory:')
     app = createApp(db, SECRET)
     createStaff(db, { email: 'staff@kwhab.ca', passwordHash: await hashPassword('correct-password') })
+    createStaff(db, { email: 'other-staff@kwhab.ca', passwordHash: await hashPassword('other-password') })
   })
 
   it('GET /api/events starts empty', async () => {
@@ -80,5 +81,80 @@ describe('app', () => {
   it('GET /api/auth/me without a session returns 401', async () => {
     const res = await request(app).get('/api/auth/me')
     expect(res.status).toBe(401)
+  })
+
+  it('rejects an event with registration "Sign up first" and no registrationUrl', async () => {
+    const agent = request.agent(app)
+    await agent.post('/api/auth/login').send({ email: 'staff@kwhab.ca', password: 'correct-password' })
+    const res = await agent.post('/api/events').send({ ...validEvent, registration: 'Sign up first' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/registrationUrl/)
+  })
+
+  it('GET /api/events/mine requires a session and returns only events created by that staff account', async () => {
+    const unauthenticated = await request(app).get('/api/events/mine')
+    expect(unauthenticated.status).toBe(401)
+
+    const agentA = request.agent(app)
+    await agentA.post('/api/auth/login').send({ email: 'staff@kwhab.ca', password: 'correct-password' })
+    await agentA.post('/api/events').send(validEvent)
+
+    const agentB = request.agent(app)
+    await agentB.post('/api/auth/login').send({ email: 'other-staff@kwhab.ca', password: 'other-password' })
+    await agentB.post('/api/events').send({ ...validEvent, title: 'Other Staff Event' })
+
+    const mineA = await agentA.get('/api/events/mine')
+    expect(mineA.body).toHaveLength(1)
+    expect(mineA.body[0].title).toBe('Community Art Afternoon')
+
+    const mineB = await agentB.get('/api/events/mine')
+    expect(mineB.body).toHaveLength(1)
+    expect(mineB.body[0].title).toBe('Other Staff Event')
+  })
+
+  it('PATCH /api/events/:id requires a session, returns 404 for an unknown id, and 403 for another staff member\'s event', async () => {
+    const agentA = request.agent(app)
+    await agentA.post('/api/auth/login').send({ email: 'staff@kwhab.ca', password: 'correct-password' })
+    const created = await agentA.post('/api/events').send(validEvent)
+
+    const unauthenticated = await request(app).patch(`/api/events/${created.body.id}`).send(validEvent)
+    expect(unauthenticated.status).toBe(401)
+
+    const missing = await agentA.patch('/api/events/no-such-id').send(validEvent)
+    expect(missing.status).toBe(404)
+
+    const agentB = request.agent(app)
+    await agentB.post('/api/auth/login').send({ email: 'other-staff@kwhab.ca', password: 'other-password' })
+    const forbidden = await agentB.patch(`/api/events/${created.body.id}`).send({ ...validEvent, title: 'Hijacked' })
+    expect(forbidden.status).toBe(403)
+
+    const stillOriginal = await request(app).get('/api/events')
+    expect(stillOriginal.body[0].title).toBe('Community Art Afternoon')
+  })
+
+  it('PATCH /api/events/:id updates the event when the owning staff member is authenticated', async () => {
+    const agent = request.agent(app)
+    await agent.post('/api/auth/login').send({ email: 'staff@kwhab.ca', password: 'correct-password' })
+    const created = await agent.post('/api/events').send(validEvent)
+
+    const updated = await agent.patch(`/api/events/${created.body.id}`).send({ ...validEvent, title: 'Updated Title', place: 'New Venue' })
+    expect(updated.status).toBe(200)
+    expect(updated.body.title).toBe('Updated Title')
+    expect(updated.body.place).toBe('New Venue')
+    expect(updated.body.id).toBe(created.body.id)
+
+    const list = await request(app).get('/api/events')
+    expect(list.body).toHaveLength(1)
+    expect(list.body[0].title).toBe('Updated Title')
+  })
+
+  it('PATCH /api/events/:id rejects an invalid payload even for the owning staff member', async () => {
+    const agent = request.agent(app)
+    await agent.post('/api/auth/login').send({ email: 'staff@kwhab.ca', password: 'correct-password' })
+    const created = await agent.post('/api/events').send(validEvent)
+
+    const res = await agent.patch(`/api/events/${created.body.id}`).send({ ...validEvent, title: '' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/title/)
   })
 })

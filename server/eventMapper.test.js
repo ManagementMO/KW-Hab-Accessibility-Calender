@@ -5,7 +5,7 @@ const sampleInput = {
   title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', time: '2:00 PM - 3:30 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
-  support: 'Staff support available', registration: 'Yes, just come', image: 'https://example.com/a.jpg',
+  support: 'Staff support available', registration: 'Yes, just come', registrationUrl: '', image: 'https://example.com/a.jpg',
   reason: 'Recommended because you like making things in a calm room.', short: 'Paint, draw, or make a craft.',
   plain: 'We will make art together.',
   arrival: [{ icon: '🚪', title: 'Use the front door', detail: 'The door has a flat entrance.', image: 'https://example.com/b.jpg' }],
@@ -14,20 +14,21 @@ const sampleInput = {
 
 describe('eventInputToRow / rowToEvent round trip', () => {
   it('maps a full input to a row and back to an equivalent Event', () => {
-    const row = eventInputToRow(sampleInput, 'abc-123', '2026-08-02T00:00:00.000Z')
+    const row = eventInputToRow(sampleInput, 'abc-123', '2026-08-02T00:00:00.000Z', 'staff-1')
     expect(row.id).toBe('abc-123')
     expect(row.group_label).toBe('12 people')
     expect(row.access_status).toBe('reported')
     expect(row.access_note).toBe('Indoor and step-free')
+    expect(row.created_by).toBe('staff-1')
 
     const event = rowToEvent(row)
     expect(event).toEqual({
-      id: 'abc-123', ...sampleInput,
+      id: 'abc-123', ...sampleInput, createdBy: 'staff-1',
     })
   })
 
   it('maps a row with no journey to an event with journey undefined', () => {
-    const row = eventInputToRow({ ...sampleInput, journey: undefined }, 'abc-124', '2026-08-02T00:00:00.000Z')
+    const row = eventInputToRow({ ...sampleInput, journey: undefined }, 'abc-124', '2026-08-02T00:00:00.000Z', 'staff-1')
     expect(row.journey).toBeNull()
     const event = rowToEvent(row)
     expect(event.journey).toBeUndefined()
@@ -75,5 +76,20 @@ describe('validateEventInput', () => {
   it('flags an optional field that is present but not text', () => {
     const errors = validateEventInput({ ...sampleInput, bus: 42 })
     expect(errors).toContain('bus must be text')
+  })
+
+  it('requires registrationUrl when registration is "Sign up first"', () => {
+    const errors = validateEventInput({ ...sampleInput, registration: 'Sign up first', registrationUrl: '' })
+    expect(errors).toContain('registrationUrl is required when registration is "Sign up first"')
+  })
+
+  it('allows registrationUrl to be empty when registration is "Yes, just come"', () => {
+    const errors = validateEventInput({ ...sampleInput, registration: 'Yes, just come', registrationUrl: '' })
+    expect(errors).toEqual([])
+  })
+
+  it('accepts a "Sign up first" event once registrationUrl is provided', () => {
+    const errors = validateEventInput({ ...sampleInput, registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register' })
+    expect(errors).toEqual([])
   })
 })

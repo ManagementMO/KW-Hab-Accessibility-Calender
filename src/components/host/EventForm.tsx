@@ -1,14 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import { createEvent, type ArrivalStep, type Event, type Journey } from '../../lib/api'
+import { createEvent, updateEvent, type ArrivalStep, type Event, type Journey } from '../../lib/api'
 import { suggestArrivalIcon } from '../../lib/arrivalIcon'
+import { CATEGORIES } from '../../lib/categories'
 
 const emptyArrivalStep: ArrivalStep = { icon: '', title: '', detail: '', image: '' }
 const emptyJourney: Journey = { route: '', leave: '', duration: '', steps: [''] }
 
 const initialForm = {
   title: '', category: '', day: '', time: '', place: '', cost: '', bus: '',
-  group: '', noise: '', support: '', registration: 'Yes, just come' as Event['registration'],
+  group: '', noise: '', support: '', registration: 'Yes, just come' as Event['registration'], registrationUrl: '',
   image: '', reason: '', short: '', plain: '',
   accessStatus: 'reported' as 'confirmed' | 'reported' | 'not_known',
   accessOwner: '', accessLastConfirmed: '', accessNote: '',
@@ -19,8 +20,22 @@ const initialForm = {
 
 type FormState = typeof initialForm
 
-export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) {
-  const [form, setForm] = useState<FormState>(initialForm)
+function eventToForm(event: Event): FormState {
+  return {
+    title: event.title, category: event.category, day: event.day, time: event.time, place: event.place,
+    cost: event.cost, bus: event.bus, group: event.group, noise: event.noise, support: event.support,
+    registration: event.registration, registrationUrl: event.registrationUrl,
+    image: event.image, reason: event.reason, short: event.short, plain: event.plain,
+    accessStatus: event.access.status, accessOwner: event.access.owner, accessLastConfirmed: event.access.lastConfirmed, accessNote: event.access.note,
+    arrival: event.arrival,
+    includeJourney: Boolean(event.journey),
+    journey: event.journey ?? { ...emptyJourney },
+  }
+}
+
+export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: Event) => void }) {
+  const isEditing = Boolean(event)
+  const [form, setForm] = useState<FormState>(() => (event ? eventToForm(event) : initialForm))
   const [errors, setErrors] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -46,33 +61,38 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
       ['access owner', form.accessOwner], ['access last confirmed', form.accessLastConfirmed],
     ]
     for (const [label, value] of required) if (!value.trim()) problems.push(`${label} is required`)
+    if (form.registration === 'Sign up first' && !form.registrationUrl.trim()) {
+      problems.push('registration link is required when registration is "Sign up first"')
+    }
     if (form.arrival.some((step) => !step.title.trim() || !step.detail.trim())) {
       problems.push('every arrival step needs a title and detail')
     }
     return problems
   }
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault()
+  const submit = async (formEvent: FormEvent) => {
+    formEvent.preventDefault()
     const problems = validate()
     setErrors(problems)
     setSuccess(false)
     if (problems.length) return
     setSubmitting(true)
     try {
-      const created = await createEvent({
+      const payload = {
         title: form.title, category: form.category, day: form.day, time: form.time, place: form.place,
         cost: form.cost, bus: form.bus, group: form.group, noise: form.noise, support: form.support,
-        registration: form.registration, image: form.image, reason: form.reason, short: form.short, plain: form.plain,
+        registration: form.registration, registrationUrl: form.registration === 'Sign up first' ? form.registrationUrl : '',
+        image: form.image, reason: form.reason, short: form.short, plain: form.plain,
         access: { status: form.accessStatus, owner: form.accessOwner, lastConfirmed: form.accessLastConfirmed, note: form.accessNote },
         arrival: form.arrival.map((step) => ({ ...step, icon: suggestArrivalIcon(step.title + ' ' + step.detail) })),
         journey: form.includeJourney ? form.journey : undefined,
-      })
-      setForm(initialForm)
+      }
+      const saved = isEditing && event ? await updateEvent(event.id, payload) : await createEvent(payload)
+      if (!isEditing) setForm(initialForm)
       setSuccess(true)
-      onCreated(created)
+      onSaved(saved)
     } catch (err) {
-      setErrors([err instanceof Error ? err.message : 'Could not create event'])
+      setErrors([err instanceof Error ? err.message : 'Could not save event'])
     } finally {
       setSubmitting(false)
     }
@@ -80,7 +100,13 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
 
   return <form className="event-form" onSubmit={submit}>
     <label>Event name<input value={form.title} onChange={(event) => update('title', event.target.value)} /></label>
-    <label>Category<input value={form.category} onChange={(event) => update('category', event.target.value)} /></label>
+    <label>Category
+      <select value={form.category} onChange={(event) => update('category', event.target.value)}>
+        <option value="" disabled>Choose a category</option>
+        {CATEGORIES.map((c) => <option key={c.name} value={c.name}>{c.emoji} {c.name}</option>)}
+        <option value="Other">Other</option>
+      </select>
+    </label>
     <label>Day<input value={form.day} onChange={(event) => update('day', event.target.value)} /></label>
     <label>Time<input value={form.time} onChange={(event) => update('time', event.target.value)} /></label>
     <label>Place<input value={form.place} onChange={(event) => update('place', event.target.value)} /></label>
@@ -95,6 +121,7 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
         <option value="Sign up first">Sign up first</option>
       </select>
     </label>
+    {form.registration === 'Sign up first' && <label>Registration link<input type="url" value={form.registrationUrl} onChange={(event) => update('registrationUrl', event.target.value)} placeholder="https://kwhab.ca/register" /></label>}
     <label>Image URL (optional)<input value={form.image} onChange={(event) => update('image', event.target.value)} /></label>
     <label>Recommendation reason (optional)<input value={form.reason} onChange={(event) => update('reason', event.target.value)} /></label>
     <label>Short description (optional)<input value={form.short} onChange={(event) => update('short', event.target.value)} /></label>
@@ -140,7 +167,7 @@ export function EventForm({ onCreated }: { onCreated: (event: Event) => void }) 
     </fieldset>
 
     {errors.length > 0 && <div role="alert" className="form-error"><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div>}
-    {success && <p role="status" className="form-success">Event created and visible to participants.</p>}
-    <button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create event'}</button>
+    {success && <p role="status" className="form-success">{isEditing ? 'Event updated.' : 'Event created and visible to participants.'}</p>}
+    <button type="submit" disabled={submitting}>{submitting ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save changes' : 'Create event')}</button>
   </form>
 }

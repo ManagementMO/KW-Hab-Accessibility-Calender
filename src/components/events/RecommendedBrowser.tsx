@@ -3,11 +3,15 @@ import { useMemo, useState } from 'react'
 import { accessSearchText, accessSuggestsStepFree, formatAccessFact } from '../../lib/accessFact'
 import { Event } from '../../lib/api'
 import { eventImageSrc } from '../../lib/eventDisplay'
+import { CATEGORIES } from '../../lib/categories'
 import { Language } from '../accessibility/ListenButton'
 import { ReadingMode } from '../accessibility/AccessibilityBar'
 import { EmptyState } from '../features/EmptyState'
 
-const filters = ['Today', 'Free', '♿ Wheelchair', '🔇 Quiet', '🚌 Bus', 'Near Me', 'Art', 'Youth', 'Adults']
+const nonCategoryFilters = ['Today', 'Free', '♿ Wheelchair', '🔇 Quiet', '🚌 Bus', 'Near Me', 'Youth', 'Adults']
+const categoryFilterLabels = CATEGORIES.map((category) => `${category.emoji} ${category.filterLabel ?? category.name}`)
+const categoryByFilterLabel = new Map(CATEGORIES.map((category) => [`${category.emoji} ${category.filterLabel ?? category.name}`, category.name]))
+const filters = [...nonCategoryFilters, ...categoryFilterLabels]
 
 export function RecommendedBrowser({ events, onOpen, mode, pecs, language, slow }: {
   events: Event[]; onOpen: (event: Event) => void; mode: ReadingMode; pecs: boolean; language: Language; slow: boolean
@@ -16,10 +20,10 @@ export function RecommendedBrowser({ events, onOpen, mode, pecs, language, slow 
   const [active, setActive] = useState<string[]>([])
   const displayed = useMemo(() => events.filter((event) =>
     `${event.title} ${event.category} ${event.cost} ${event.noise} ${event.bus} ${accessSearchText(event.access)}`.toLowerCase().includes(query.toLowerCase())
-    && active.every((filter) => filter === 'Free' ? event.cost === 'Free'
-      : filter.includes('Quiet') ? event.noise.toLowerCase().includes('quiet')
-      : filter.includes('Wheelchair') ? accessSuggestsStepFree(event.access)
-      : filter === 'Art' ? event.category === 'Art'
+    && active.every((filter) => categoryByFilterLabel.has(filter) ? event.category === categoryByFilterLabel.get(filter)
+      : filter === 'Free' ? event.cost === 'Free'
+      : filter === '🔇 Quiet' ? event.noise.toLowerCase().includes('quiet')
+      : filter === '♿ Wheelchair' ? accessSuggestsStepFree(event.access)
       : true)
   ), [active, query, events])
 
