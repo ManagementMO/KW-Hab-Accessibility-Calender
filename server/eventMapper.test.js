@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { eventInputToRow, rowToEvent, validateEventInput } from './eventMapper.js'
 
 const sampleInput = {
-  title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', time: '2:00 PM - 3:30 PM',
+  title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
   support: 'Staff support available', registration: 'Yes, just come', registrationUrl: '', image: 'https://example.com/a.jpg',
   reason: 'Recommended because you like making things in a calm room.', short: 'Paint, draw, or make a craft.',
-  plain: 'We will make art together.',
+  plain: 'We will make art together.', host: 'KW Hab staff',
   arrival: [{ icon: '🚪', title: 'Use the front door', detail: 'The door has a flat entrance.', image: 'https://example.com/b.jpg' }],
   journey: { route: 'Bus 4 to Victoria Hills', leave: 'Leaves at 1:26 PM', duration: '14 min', steps: ['Leave home', 'Bus 4'] },
 }
@@ -91,5 +91,16 @@ describe('validateEventInput', () => {
   it('accepts a "Sign up first" event once registrationUrl is provided', () => {
     const errors = validateEventInput({ ...sampleInput, registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register' })
     expect(errors).toEqual([])
+  })
+
+  it('requires date and host', () => {
+    const errors = validateEventInput({ ...sampleInput, date: '', host: '' })
+    expect(errors).toContain('date is required')
+    expect(errors).toContain('host is required')
+  })
+
+  it('flags a date that is not in YYYY-MM-DD format', () => {
+    const errors = validateEventInput({ ...sampleInput, date: '08/12/2026' })
+    expect(errors).toContain('date must be in YYYY-MM-DD format')
   })
 })

@@ -39,6 +39,8 @@ function migrate(db) {
   const columns = db.prepare("PRAGMA table_info(events)").all().map((column) => column.name)
   if (!columns.includes('registration_url')) db.exec('ALTER TABLE events ADD COLUMN registration_url TEXT NOT NULL DEFAULT \'\'')
   if (!columns.includes('created_by')) db.exec('ALTER TABLE events ADD COLUMN created_by TEXT NOT NULL DEFAULT \'\'')
+  if (!columns.includes('date')) db.exec('ALTER TABLE events ADD COLUMN date TEXT NOT NULL DEFAULT \'\'')
+  if (!columns.includes('host')) db.exec('ALTER TABLE events ADD COLUMN host TEXT NOT NULL DEFAULT \'\'')
 }
 
 export function openDb(path) {

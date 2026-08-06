@@ -3,9 +3,26 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import * as api from './lib/api'
+import type { Event } from './lib/api'
 
 afterEach(cleanup)
 afterEach(() => { localStorage.clear(); vi.restoreAllMocks() })
+
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+function localDateString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function baseEvent(overrides: Partial<Event>): Event {
+  return {
+    id: 'event', title: 'Event', category: 'Art', day: 'Monday', date: localDateString(new Date()), time: '9:00 AM', place: 'Hall',
+    cost: 'Free', bus: '', group: '', noise: '', access: { status: 'not_known', owner: 'me', lastConfirmed: '2026-08-01', note: '' },
+    support: '', registration: 'Yes, just come', registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.', host: 'Host',
+    arrival: [{ icon: '📍', title: 'Arrive', detail: 'Come in.', image: '' }], createdBy: 'staff-1',
+    ...overrides,
+  }
+}
 
 async function enterAsParticipant() {
   vi.spyOn(api, 'getSession').mockResolvedValue(null)
@@ -28,13 +45,13 @@ describe('Belonging Loop accessible calendar', () => {
     const user = userEvent.setup()
     vi.spyOn(api, 'getSession').mockResolvedValue(null)
     vi.spyOn(api, 'getEvents').mockResolvedValue([{
-      id: 'nature', title: 'Accessible Nature Walk', category: 'Outdoors', day: 'Saturday', time: '10:00 AM - 11:30 AM',
+      id: 'nature', title: 'Accessible Nature Walk', category: 'Outdoors', day: 'Saturday', date: '2026-08-08', time: '10:00 AM - 11:30 AM',
       place: 'Waterloo Park', cost: 'Free', bus: 'Route 7 stops nearby', group: 'Small group', noise: 'Quiet',
       access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Step-free path' },
       support: 'Mobility support can be requested', registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register/nature-walk',
       image: 'https://example.com/a.jpg',
       reason: 'Recommended because you like outdoor activities and small groups.', short: 'A calm walk with time for breaks.',
-      plain: 'We will walk together.',
+      plain: 'We will walk together.', host: 'Priya, Program Coordinator',
       arrival: [{ icon: '🚪', title: 'Enter by the park gate', detail: 'Use the wide gate beside the bus stop.', image: 'https://example.com/b.jpg' }],
       createdBy: 'staff-1',
     }])
@@ -44,6 +61,9 @@ describe('Belonging Loop accessible calendar', () => {
     await user.click(screen.getByRole('button', { name: /skip setup/i }))
     await user.click(await screen.findByRole('button', { name: 'Accessible Nature Walk' }))
     expect(screen.getByRole('heading', { name: 'Accessible Nature Walk' })).toBeInTheDocument()
+
+    expect(screen.getByText('Priya, Program Coordinator')).toBeInTheDocument()
+    expect(screen.queryByText(/Jordan/)).not.toBeInTheDocument()
 
     const registerLink = screen.getByRole('link', { name: 'Register here' })
     expect(registerLink).toHaveAttribute('href', 'https://kwhab.ca/register/nature-walk')
@@ -128,9 +148,9 @@ describe('Belonging Loop accessible calendar', () => {
   it('lists only the staff member\'s own events on the staff screen and lets them edit one', async () => {
     const user = userEvent.setup()
     const myEvent = {
-      id: 'my-event-1', title: 'My Event', category: 'Art', day: 'Monday', time: '9:00 AM', place: 'Hall',
+      id: 'my-event-1', title: 'My Event', category: 'Art', day: 'Monday', date: '2026-08-10', time: '9:00 AM', place: 'Hall',
       cost: 'Free', bus: '', group: '', noise: '', access: { status: 'not_known' as const, owner: 'me', lastConfirmed: '2026-08-01', note: '' },
-      support: '', registration: 'Yes, just come' as const, registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.',
+      support: '', registration: 'Yes, just come' as const, registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.', host: 'Me',
       arrival: [{ icon: '📍', title: 'Arrive', detail: 'Come in.', image: '' }], createdBy: 'staff-1',
     }
     vi.spyOn(api, 'getSession').mockResolvedValue({ ok: true, email: 'staff@kwhab.ca' })
@@ -142,5 +162,43 @@ describe('Belonging Loop accessible calendar', () => {
     await user.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByLabelText('Event name')).toHaveValue('My Event')
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument()
+  })
+
+  it('All events only shows events dated in the current calendar week, using the real system date', async () => {
+    const user = userEvent.setup()
+    const today = new Date()
+    const farFuture = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30)
+    const thisWeekEvent = baseEvent({
+      id: 'this-week', title: 'This Week Event', day: WEEKDAY_NAMES[today.getDay()], date: localDateString(today),
+    })
+    const otherWeekEvent = baseEvent({
+      id: 'other-week', title: 'Far Future Event', day: WEEKDAY_NAMES[farFuture.getDay()], date: localDateString(farFuture),
+    })
+    vi.spyOn(api, 'getSession').mockResolvedValue(null)
+    vi.spyOn(api, 'getEvents').mockResolvedValue([thisWeekEvent, otherWeekEvent])
+    render(<App />)
+    await screen.findByRole('heading', { name: 'How do you like to use this app?' })
+    await user.click(screen.getByRole('button', { name: /skip setup/i }))
+
+    await user.click(screen.getByRole('button', { name: 'All events' }))
+    expect(await screen.findByRole('button', { name: /Open This Week Event/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Open Far Future Event/ })).not.toBeInTheDocument()
+  })
+
+  it('My Week\'s other-events section only shows this week\'s non-saved events, using the real system date', async () => {
+    const user = userEvent.setup()
+    const today = new Date()
+    const farFuture = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30)
+    const thisWeekEvent = baseEvent({ id: 'this-week', title: 'This Week Event', date: localDateString(today) })
+    const otherWeekEvent = baseEvent({ id: 'other-week', title: 'Far Future Event', date: localDateString(farFuture) })
+    vi.spyOn(api, 'getSession').mockResolvedValue(null)
+    vi.spyOn(api, 'getEvents').mockResolvedValue([thisWeekEvent, otherWeekEvent])
+    render(<App />)
+    await screen.findByRole('heading', { name: 'How do you like to use this app?' })
+    await user.click(screen.getByRole('button', { name: /skip setup/i }))
+
+    await user.click(screen.getByRole('button', { name: 'My Week' }))
+    expect(await screen.findByRole('button', { name: 'This Week Event' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Far Future Event' })).not.toBeInTheDocument()
   })
 })

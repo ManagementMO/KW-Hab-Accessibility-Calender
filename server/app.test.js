@@ -7,12 +7,12 @@ import { createStaff } from './staffRepo.js'
 
 const SECRET = 'test-secret'
 const validEvent = {
-  title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', time: '2:00 PM - 3:30 PM',
+  title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
   support: 'Staff support available', registration: 'Yes, just come', image: 'https://example.com/a.jpg',
   reason: 'Recommended because you like making things in a calm room.', short: 'Paint, draw, or make a craft.',
-  plain: 'We will make art together.',
+  plain: 'We will make art together.', host: 'KW Hab staff',
   arrival: [{ icon: '🚪', title: 'Use the front door', detail: 'The door has a flat entrance.', image: 'https://example.com/b.jpg' }],
 }
 

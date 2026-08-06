@@ -8,9 +8,9 @@ afterEach(cleanup)
 
 function makeEvent(overrides: Partial<Event>): Event {
   return {
-    id: overrides.title ?? 'event', title: 'Event', category: 'Art', day: 'Monday', time: '9:00 AM', place: 'Hall',
+    id: overrides.title ?? 'event', title: 'Event', category: 'Art', day: 'Monday', date: '2026-08-10', time: '9:00 AM', place: 'Hall',
     cost: 'Free', bus: '', group: '', noise: '', access: { status: 'not_known', owner: 'me', lastConfirmed: '2026-08-01', note: '' },
-    support: '', registration: 'Yes, just come', registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.',
+    support: '', registration: 'Yes, just come', registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.', host: 'Host',
     arrival: [{ icon: '📍', title: 'Arrive', detail: 'Come in.', image: '' }], createdBy: 'staff-1',
     ...overrides,
   }

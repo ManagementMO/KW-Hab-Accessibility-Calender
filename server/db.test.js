@@ -11,10 +11,10 @@ describe('openDb', () => {
     expect(tables).toEqual(expect.arrayContaining(['events', 'staff']))
   })
 
-  it('adds registration_url and created_by columns to the events table', () => {
+  it('adds registration_url, created_by, date, and host columns to the events table', () => {
     const db = openDb(':memory:')
     const columns = db.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
-    expect(columns).toEqual(expect.arrayContaining(['registration_url', 'created_by']))
+    expect(columns).toEqual(expect.arrayContaining(['registration_url', 'created_by', 'date', 'host']))
   })
 
   it('backfills the new columns on a database created before they existed', () => {
@@ -25,14 +25,16 @@ describe('openDb', () => {
       db1 = openDb(dbPath)
       db1.exec('ALTER TABLE events DROP COLUMN registration_url')
       db1.exec('ALTER TABLE events DROP COLUMN created_by')
+      db1.exec('ALTER TABLE events DROP COLUMN date')
+      db1.exec('ALTER TABLE events DROP COLUMN host')
       let columns = db1.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
-      expect(columns).not.toEqual(expect.arrayContaining(['registration_url', 'created_by']))
+      expect(columns).not.toEqual(expect.arrayContaining(['registration_url', 'created_by', 'date', 'host']))
       db1.close()
       db1 = null
 
       db2 = openDb(dbPath)
       columns = db2.prepare('PRAGMA table_info(events)').all().map((column) => column.name)
-      expect(columns).toEqual(expect.arrayContaining(['registration_url', 'created_by']))
+      expect(columns).toEqual(expect.arrayContaining(['registration_url', 'created_by', 'date', 'host']))
       db2.close()
       db2 = null
     } finally {

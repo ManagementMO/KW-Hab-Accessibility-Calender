@@ -8,9 +8,9 @@ const emptyArrivalStep: ArrivalStep = { icon: '', title: '', detail: '', image: 
 const emptyJourney: Journey = { route: '', leave: '', duration: '', steps: [''] }
 
 const initialForm = {
-  title: '', category: '', day: '', time: '', place: '', cost: '', bus: '',
+  title: '', category: '', day: '', date: '', time: '', place: '', cost: '', bus: '',
   group: '', noise: '', support: '', registration: 'Yes, just come' as Event['registration'], registrationUrl: '',
-  image: '', reason: '', short: '', plain: '',
+  image: '', reason: '', short: '', plain: '', host: '',
   accessStatus: 'reported' as 'confirmed' | 'reported' | 'not_known',
   accessOwner: '', accessLastConfirmed: '', accessNote: '',
   arrival: [{ ...emptyArrivalStep }] as ArrivalStep[],
@@ -22,10 +22,10 @@ type FormState = typeof initialForm
 
 function eventToForm(event: Event): FormState {
   return {
-    title: event.title, category: event.category, day: event.day, time: event.time, place: event.place,
+    title: event.title, category: event.category, day: event.day, date: event.date, time: event.time, place: event.place,
     cost: event.cost, bus: event.bus, group: event.group, noise: event.noise, support: event.support,
     registration: event.registration, registrationUrl: event.registrationUrl,
-    image: event.image, reason: event.reason, short: event.short, plain: event.plain,
+    image: event.image, reason: event.reason, short: event.short, plain: event.plain, host: event.host,
     accessStatus: event.access.status, accessOwner: event.access.owner, accessLastConfirmed: event.access.lastConfirmed, accessNote: event.access.note,
     arrival: event.arrival,
     includeJourney: Boolean(event.journey),
@@ -56,8 +56,8 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
   const validate = (): string[] => {
     const problems: string[] = []
     const required: [string, string][] = [
-      ['title', form.title], ['category', form.category], ['day', form.day], ['time', form.time],
-      ['place', form.place], ['cost', form.cost], ['plain', form.plain],
+      ['title', form.title], ['category', form.category], ['day', form.day], ['date', form.date], ['time', form.time],
+      ['place', form.place], ['cost', form.cost], ['plain', form.plain], ['host', form.host],
       ['access owner', form.accessOwner], ['access last confirmed', form.accessLastConfirmed],
     ]
     for (const [label, value] of required) if (!value.trim()) problems.push(`${label} is required`)
@@ -79,10 +79,10 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
     setSubmitting(true)
     try {
       const payload = {
-        title: form.title, category: form.category, day: form.day, time: form.time, place: form.place,
+        title: form.title, category: form.category, day: form.day, date: form.date, time: form.time, place: form.place,
         cost: form.cost, bus: form.bus, group: form.group, noise: form.noise, support: form.support,
         registration: form.registration, registrationUrl: form.registration === 'Sign up first' ? form.registrationUrl : '',
-        image: form.image, reason: form.reason, short: form.short, plain: form.plain,
+        image: form.image, reason: form.reason, short: form.short, plain: form.plain, host: form.host,
         access: { status: form.accessStatus, owner: form.accessOwner, lastConfirmed: form.accessLastConfirmed, note: form.accessNote },
         arrival: form.arrival.map((step) => ({ ...step, icon: suggestArrivalIcon(step.title + ' ' + step.detail) })),
         journey: form.includeJourney ? form.journey : undefined,
@@ -108,6 +108,7 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
       </select>
     </label>
     <label>Day<input value={form.day} onChange={(event) => update('day', event.target.value)} /></label>
+    <label>Date<input type="date" value={form.date} onChange={(event) => update('date', event.target.value)} /></label>
     <label>Time<input value={form.time} onChange={(event) => update('time', event.target.value)} /></label>
     <label>Place<input value={form.place} onChange={(event) => update('place', event.target.value)} /></label>
     <label>Cost<input value={form.cost} onChange={(event) => update('cost', event.target.value)} /></label>
@@ -126,6 +127,7 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
     <label>Recommendation reason (optional)<input value={form.reason} onChange={(event) => update('reason', event.target.value)} /></label>
     <label>Short description (optional)<input value={form.short} onChange={(event) => update('short', event.target.value)} /></label>
     <label>Plain-language description<textarea value={form.plain} onChange={(event) => update('plain', event.target.value)} /></label>
+    <label>Host<input value={form.host} onChange={(event) => update('host', event.target.value)} placeholder="e.g. Jordan, LEG Up! Program Coordinator" /></label>
 
     <fieldset className="access-fields">
       <legend>Access facts</legend>

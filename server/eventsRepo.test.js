@@ -3,13 +3,13 @@ import { openDb } from './db.js'
 import { getEventById, insertEvent, listEvents, listEventsByStaff, updateEvent } from './eventsRepo.js'
 
 const sampleInput = {
-  title: 'Music and Games Night', category: 'Music', day: 'Friday', time: '6:00 PM - 8:00 PM',
+  title: 'Music and Games Night', category: 'Music', day: 'Friday', date: '2026-08-14', time: '6:00 PM - 8:00 PM',
   place: 'Kitchener Community Hall', cost: '$5', bus: 'Route 8 until 9 PM', group: '20 people', noise: 'Moderate noise',
   access: { status: 'confirmed', owner: 'KW Hab staff', lastConfirmed: '2026-07-01', note: 'Ramp entrance' },
   support: 'Support people are free', registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register',
   image: 'https://example.com/c.jpg',
   reason: 'Recommended because you enjoy music.', short: 'Listen to music and play games.',
-  plain: 'We will listen to music.',
+  plain: 'We will listen to music.', host: 'KW Hab staff',
   arrival: [{ icon: '🚪', title: 'Use the ramp', detail: 'On the side of the hall.', image: 'https://example.com/d.jpg' }],
 }
 

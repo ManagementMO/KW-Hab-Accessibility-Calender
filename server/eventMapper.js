@@ -1,4 +1,4 @@
-const REQUIRED_FIELDS = ['title', 'category', 'day', 'time', 'place', 'cost', 'registration', 'plain']
+const REQUIRED_FIELDS = ['title', 'category', 'day', 'time', 'place', 'cost', 'registration', 'plain', 'date', 'host']
 const OPTIONAL_TEXT_FIELDS = ['bus', 'group', 'noise', 'support', 'image', 'reason', 'short']
 const ACCESS_STATUSES = ['confirmed', 'reported', 'not_known']
 
@@ -8,6 +8,7 @@ export function rowToEvent(row) {
     title: row.title,
     category: row.category,
     day: row.day,
+    date: row.date,
     time: row.time,
     place: row.place,
     cost: row.cost,
@@ -27,6 +28,7 @@ export function rowToEvent(row) {
     reason: row.reason,
     short: row.short,
     plain: row.plain,
+    host: row.host,
     arrival: JSON.parse(row.arrival),
     journey: row.journey ? JSON.parse(row.journey) : undefined,
     createdBy: row.created_by,
@@ -39,6 +41,7 @@ export function eventInputToRow(input, id, createdAt, createdBy) {
     title: input.title,
     category: input.category,
     day: input.day,
+    date: input.date,
     time: input.time,
     place: input.place,
     cost: input.cost,
@@ -56,6 +59,7 @@ export function eventInputToRow(input, id, createdAt, createdBy) {
     reason: input.reason || '',
     short: input.short || '',
     plain: input.plain,
+    host: input.host,
     arrival: JSON.stringify(input.arrival),
     journey: input.journey ? JSON.stringify(input.journey) : null,
     created_at: createdAt,
@@ -75,6 +79,9 @@ export function validateEventInput(input) {
   }
   if (input.registration === 'Sign up first' && (!input.registrationUrl || !input.registrationUrl.trim())) {
     errors.push('registrationUrl is required when registration is "Sign up first"')
+  }
+  if (typeof input.date === 'string' && input.date.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(input.date.trim())) {
+    errors.push('date must be in YYYY-MM-DD format')
   }
   if (!input.access || typeof input.access !== 'object') {
     errors.push('access is required')

@@ -13,6 +13,7 @@ export type Event = {
   title: string
   category: string
   day: string
+  date: string
   time: string
   place: string
   cost: string
@@ -27,6 +28,7 @@ export type Event = {
   reason: string
   short: string
   plain: string
+  host: string
   arrival: ArrivalStep[]
   journey?: Journey
   createdBy: string

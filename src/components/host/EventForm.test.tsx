@@ -9,12 +9,12 @@ afterEach(cleanup)
 afterEach(() => { vi.restoreAllMocks() })
 
 const sampleEvent: Event = {
-  id: 'event-1', title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', time: '2:00 PM - 3:30 PM',
+  id: 'event-1', title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
   support: 'Staff support available', registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register',
   image: 'https://example.com/a.jpg', reason: 'Recommended because you like art.', short: 'Paint, draw, or make a craft.',
-  plain: 'We will make art together.',
+  plain: 'We will make art together.', host: 'Priya, Program Coordinator',
   arrival: [{ icon: '🚪', title: 'Use the front door', detail: 'The door has a flat entrance.', image: '' }],
   createdBy: 'staff-1',
 }
@@ -23,10 +23,14 @@ async function fillMinimumRequiredFields(user: ReturnType<typeof userEvent.setup
   await user.type(screen.getByLabelText('Event name'), 'Community Art Afternoon')
   await user.selectOptions(screen.getByLabelText('Category'), 'Art')
   await user.type(screen.getByLabelText('Day'), 'Wednesday')
+  const dateField = screen.getByLabelText('Date')
+  await user.clear(dateField)
+  await user.type(dateField, '2026-08-12')
   await user.type(screen.getByLabelText('Time'), '2:00 PM - 3:30 PM')
   await user.type(screen.getByLabelText('Place'), 'Victoria Hills Centre')
   await user.type(screen.getByLabelText('Cost'), 'Free')
   await user.type(screen.getByLabelText('Plain-language description'), 'We will make art together.')
+  await user.type(screen.getByLabelText('Host'), 'Priya, Program Coordinator')
   await user.type(screen.getByLabelText('Owner'), 'KW Hab staff')
   const dateInput = screen.getByLabelText('Last confirmed')
   await user.clear(dateInput)
@@ -65,6 +69,8 @@ describe('EventForm (create mode)', () => {
     expect(payload.bus).toBe('')
     expect(payload.image).toBe('')
     expect(payload.registrationUrl).toBe('')
+    expect(payload.date).toBe('2026-08-12')
+    expect(payload.host).toBe('Priya, Program Coordinator')
     expect(payload.arrival).toEqual([{ icon: '🚪', title: 'Use the front door', detail: 'The door has a flat entrance.', image: '' }])
     expect(payload.journey).toBeUndefined()
   }, 15000)
@@ -107,6 +113,8 @@ describe('EventForm (edit mode)', () => {
     render(<EventForm event={sampleEvent} onSaved={vi.fn()} />)
     expect(screen.getByLabelText('Event name')).toHaveValue('Community Art Afternoon')
     expect(screen.getByLabelText('Category')).toHaveValue('Art')
+    expect(screen.getByLabelText('Date')).toHaveValue('2026-08-12')
+    expect(screen.getByLabelText('Host')).toHaveValue('Priya, Program Coordinator')
     expect(screen.getByLabelText('Registration link')).toHaveValue('https://kwhab.ca/register')
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /create event/i })).not.toBeInTheDocument()
