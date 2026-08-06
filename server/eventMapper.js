@@ -1,4 +1,4 @@
-const REQUIRED_FIELDS = ['title', 'category', 'day', 'time', 'place', 'cost', 'registration', 'plain', 'date', 'host']
+const REQUIRED_FIELDS = ['title', 'category', 'time', 'place', 'cost', 'registration', 'plain', 'date', 'host']
 const OPTIONAL_TEXT_FIELDS = ['bus', 'group', 'noise', 'support', 'image', 'reason', 'short']
 const ACCESS_STATUSES = ['confirmed', 'reported', 'not_known']
 
@@ -7,7 +7,6 @@ export function rowToEvent(row) {
     id: row.id,
     title: row.title,
     category: row.category,
-    day: row.day,
     date: row.date,
     time: row.time,
     place: row.place,
@@ -40,7 +39,6 @@ export function eventInputToRow(input, id, createdAt, createdBy) {
     id,
     title: input.title,
     category: input.category,
-    day: input.day,
     date: input.date,
     time: input.time,
     place: input.place,

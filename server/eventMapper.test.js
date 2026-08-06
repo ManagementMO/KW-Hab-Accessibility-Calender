@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { eventInputToRow, rowToEvent, validateEventInput } from './eventMapper.js'
 
 const sampleInput = {
-  title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
+  title: 'Community Art Afternoon', category: 'Art', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
   support: 'Staff support available', registration: 'Yes, just come', registrationUrl: '', image: 'https://example.com/a.jpg',

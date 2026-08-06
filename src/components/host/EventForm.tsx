@@ -8,7 +8,7 @@ const emptyArrivalStep: ArrivalStep = { icon: '', title: '', detail: '', image: 
 const emptyJourney: Journey = { route: '', leave: '', duration: '', steps: [''] }
 
 const initialForm = {
-  title: '', category: '', day: '', date: '', time: '', place: '', cost: '', bus: '',
+  title: '', category: '', date: '', time: '', place: '', cost: '', bus: '',
   group: '', noise: '', support: '', registration: 'Yes, just come' as Event['registration'], registrationUrl: '',
   image: '', reason: '', short: '', plain: '', host: '',
   accessStatus: 'reported' as 'confirmed' | 'reported' | 'not_known',
@@ -22,7 +22,7 @@ type FormState = typeof initialForm
 
 function eventToForm(event: Event): FormState {
   return {
-    title: event.title, category: event.category, day: event.day, date: event.date, time: event.time, place: event.place,
+    title: event.title, category: event.category, date: event.date, time: event.time, place: event.place,
     cost: event.cost, bus: event.bus, group: event.group, noise: event.noise, support: event.support,
     registration: event.registration, registrationUrl: event.registrationUrl,
     image: event.image, reason: event.reason, short: event.short, plain: event.plain, host: event.host,
@@ -56,7 +56,7 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
   const validate = (): string[] => {
     const problems: string[] = []
     const required: [string, string][] = [
-      ['title', form.title], ['category', form.category], ['day', form.day], ['date', form.date], ['time', form.time],
+      ['title', form.title], ['category', form.category], ['date', form.date], ['time', form.time],
       ['place', form.place], ['cost', form.cost], ['plain', form.plain], ['host', form.host],
       ['access owner', form.accessOwner], ['access last confirmed', form.accessLastConfirmed],
     ]
@@ -79,7 +79,7 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
     setSubmitting(true)
     try {
       const payload = {
-        title: form.title, category: form.category, day: form.day, date: form.date, time: form.time, place: form.place,
+        title: form.title, category: form.category, date: form.date, time: form.time, place: form.place,
         cost: form.cost, bus: form.bus, group: form.group, noise: form.noise, support: form.support,
         registration: form.registration, registrationUrl: form.registration === 'Sign up first' ? form.registrationUrl : '',
         image: form.image, reason: form.reason, short: form.short, plain: form.plain, host: form.host,
@@ -107,7 +107,6 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
         <option value="Other">Other</option>
       </select>
     </label>
-    <label>Day<input value={form.day} onChange={(event) => update('day', event.target.value)} /></label>
     <label>Date<input type="date" value={form.date} onChange={(event) => update('date', event.target.value)} /></label>
     <label>Time<input value={form.time} onChange={(event) => update('time', event.target.value)} /></label>
     <label>Place<input value={form.place} onChange={(event) => update('place', event.target.value)} /></label>

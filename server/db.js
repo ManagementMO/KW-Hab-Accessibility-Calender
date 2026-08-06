@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   category TEXT NOT NULL,
-  day TEXT NOT NULL,
   time TEXT NOT NULL,
   place TEXT NOT NULL,
   cost TEXT NOT NULL,
@@ -41,6 +40,7 @@ function migrate(db) {
   if (!columns.includes('created_by')) db.exec('ALTER TABLE events ADD COLUMN created_by TEXT NOT NULL DEFAULT \'\'')
   if (!columns.includes('date')) db.exec('ALTER TABLE events ADD COLUMN date TEXT NOT NULL DEFAULT \'\'')
   if (!columns.includes('host')) db.exec('ALTER TABLE events ADD COLUMN host TEXT NOT NULL DEFAULT \'\'')
+  if (columns.includes('day')) db.exec('ALTER TABLE events DROP COLUMN day')
 }
 
 export function openDb(path) {

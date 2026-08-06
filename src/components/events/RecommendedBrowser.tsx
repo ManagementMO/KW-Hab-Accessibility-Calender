@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { accessSearchText, accessSuggestsStepFree, formatAccessFact } from '../../lib/accessFact'
 import { Event } from '../../lib/api'
 import { eventImageSrc } from '../../lib/eventDisplay'
+import { getWeekdayName } from '../../lib/weekRange'
 import { CATEGORIES } from '../../lib/categories'
 import { Language } from '../accessibility/ListenButton'
 import { ReadingMode } from '../accessibility/AccessibilityBar'
@@ -34,7 +35,7 @@ export function RecommendedBrowser({ events, onOpen, mode, pecs, language, slow 
     <label className="search-bar"><Search size={22} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="What would you like to do?" aria-label="Search events" /></label>
     <div className="filter-row">{filters.map((filter) => <button key={filter} className={active.includes(filter) ? 'active' : ''} onClick={() => setActive((all) => all.includes(filter) ? all.filter((item) => item !== filter) : [...all, filter])} aria-pressed={active.includes(filter)}>{filter}</button>)}</div>
     <p><strong>{displayed.length} events.</strong></p>
-    {displayed.length ? <div className="event-grid">{displayed.map((event) => <article className="event-card" key={event.id}><img src={eventImageSrc(event.image)} alt={event.title} /><div className="event-card-body"><h2>{event.title}</h2><p>{event.day} · {event.place}</p><p>♿ {formatAccessFact(event.access)}</p><button className="open-event" onClick={() => onOpen(event)}>See event</button></div></article>)}</div>
+    {displayed.length ? <div className="event-grid">{displayed.map((event) => { const weekday = getWeekdayName(event.date); return <article className="event-card" key={event.id}><img src={eventImageSrc(event.image)} alt={event.title} /><div className="event-card-body"><h2>{event.title}</h2><p>{weekday ? weekday + ' · ' : ''}{event.place}</p><p>♿ {formatAccessFact(event.access)}</p><button className="open-event" onClick={() => onOpen(event)}>See event</button></div></article> })}</div>
       : <div className="empty-week"><h2>No events match</h2><p>Try removing a filter.</p></div>}
   </section>
 }

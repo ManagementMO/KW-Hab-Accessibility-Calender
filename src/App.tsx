@@ -10,7 +10,7 @@ import { Event, getEvents, getMyEvents, getSession, logout as apiLogout } from '
 import { formatAccessFact } from './lib/accessFact'
 import { eventImageSrc } from './lib/eventDisplay'
 import { CATEGORIES } from './lib/categories'
-import { isDateInCurrentWeek } from './lib/weekRange'
+import { getWeekdayName, isDateInCurrentWeek } from './lib/weekRange'
 import { loadLanguage, loadMode, loadPecs, loadSaved, storeLanguage, storeMode, storePecs, storeSaved } from './lib/localStore'
 import { AccessibilityBar, ColorModePicker, ColorMode, ReadingMode } from './components/accessibility/AccessibilityBar'
 import { Language, ListenButton } from './components/accessibility/ListenButton'
@@ -35,13 +35,6 @@ const navItems: [LucideIcon, Tab, string][] = [
   [Heart, 'support', 'Support'],
 ]
 
-const calendarExtras = [
-  { day: 'Monday', time: '10:00 AM', icon: '🧘', title: 'Quiet Morning Yoga', place: 'Grand River Recreation Centre', type: 'Calm activity' },
-  { day: 'Tuesday', time: '4:30 PM', icon: '🍳', title: 'Cooking Club', place: 'KW Hab Kitchen', type: 'LEG Up!' },
-  { day: 'Thursday', time: '5:00 PM', icon: '🎳', title: 'Bowling Buddies', place: 'Bingemans', type: 'Out and About' },
-  { day: 'Sunday', time: '1:00 PM', icon: '🎉', title: 'Sunday Social', place: 'Victoria Park Pavilion', type: 'Community gathering' },
-]
-
 const supportCards: [LucideIcon, string, string, string, string][] = [
   [Accessibility, 'Mobility support', 'Entrances, paths, and getting around', 'Jordan · trained staff', 'Available to request'],
   [MessageCircle, 'Communication support', 'Pictures, plain words, and time to talk', 'Mina · communication helper', 'Available to request'],
@@ -58,14 +51,16 @@ function StatusBadge({ state }: { state: Event['registration'] }) {
 }
 
 function SymbolStrip({ event }: { event: Event }) {
+  const weekday = getWeekdayName(event.date)
   const items = [
-    ['🎨', event.category], ['🕐', event.day + ' · ' + event.time], ['📍', event.place], ['🆓', event.cost],
+    ['🎨', event.category], ['🕐', (weekday ? weekday + ' · ' : '') + event.time], ['📍', event.place], ['🆓', event.cost],
     ['🚌', event.bus], ['👥', event.group], ['🔊', event.noise], ['♿', formatAccessFact(event.access)], ['🧑‍🤝‍🧑', event.support],
   ].filter(([, value]) => value.trim())
   return <div className="symbol-strip" aria-label="Event details">{items.map(([icon, value]) => <span key={value}><b aria-hidden="true">{icon}</b>{value}</span>)}</div>
 }
 
 function EventCard({ event, onOpen, compact = false, slow }: { event: Event; onOpen: (event: Event) => void; compact?: boolean; slow: boolean }) {
+  const weekday = getWeekdayName(event.date)
   return <article className={'event-card' + (compact ? ' compact' : '')}>
     <button className="event-image-button" onClick={() => onOpen(event)} aria-label={event.title}>
       <img src={eventImageSrc(event.image)} alt={event.title + ' event'} /><span className="event-photo-tag">{event.category}</span>
@@ -74,7 +69,7 @@ function EventCard({ event, onOpen, compact = false, slow }: { event: Event; onO
       <div className="event-card-title"><h3>{event.title}</h3><ListenButton text={event.title + '. ' + event.plain} label={event.title} slow={slow} /></div>
       <StatusBadge state={event.registration} />
       {!compact && event.reason && <p className="recommendation"><Sparkles size={16} />{event.reason}</p>}
-      <div className="mini-details"><span><Clock3 size={16} />{event.day}</span><span><MapPin size={16} />{event.place}</span></div>
+      <div className="mini-details">{weekday && <span><Clock3 size={16} />{weekday}</span>}<span><MapPin size={16} />{event.place}</span></div>
       <button className="open-event" onClick={() => onOpen(event)}>See event <ChevronRight size={18} /></button>
     </div>
   </article>
@@ -92,6 +87,7 @@ function App() {
   const [selected, setSelected] = useState<Event | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [eventsLoaded, setEventsLoaded] = useState(false)
+  const [eventsError, setEventsError] = useState(false)
   const [myEvents, setMyEvents] = useState<Event[]>([])
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [saved, setSaved] = useState<string[]>(() => loadSaved())
@@ -109,6 +105,9 @@ function App() {
   const refreshEvents = async () => {
     try {
       setEvents(await getEvents())
+      setEventsError(false)
+    } catch {
+      setEventsError(true)
     } finally {
       setEventsLoaded(true)
     }
@@ -180,12 +179,12 @@ function App() {
 
   const renderWeek = () => {
     const otherEventsThisWeek = events.filter((event) => !saved.includes(event.id) && isDateInCurrentWeek(event.date))
-    return <section className="screen week-screen"><div className="welcome-row"><div><p className="eyebrow">MY WEEK</p><h1>My plans</h1><p>Your confirmed event is big and clear.</p></div><button className="print-button" onClick={() => window.print()}><Printer size={20} />Print My Week</button></div><div className="week-list">{savedEvents.map((event) => <article key={event.id} className="week-card confirmed-plan"><div className="date-box"><strong>{event.day.slice(0, 3)}</strong><span>{event.time.slice(0, 5)}</span></div><img src={eventImageSrc(event.image)} alt="" /><div><span className="confirmed-label">✓ You are going</span><h2>{event.title}</h2>{event.bus && <p><Bus size={16} />{event.bus}</p>}{event.support && <p><Heart size={16} />{event.support}</p>}</div><StatusBadge state={event.registration} /><ListenButton text={event.title + '. ' + event.day + '. ' + event.time + (event.bus ? '. ' + event.bus : '')} label={event.title} slow={slow} /></article>)}</div><section className="calendar-background"><p className="eyebrow">OTHER KW HAB EVENTS THIS WEEK</p>{otherEventsThisWeek.length === 0 ? <EmptyState mode={mode} pecs={pecs} language={language} slow={slow} /> : <div>{otherEventsThisWeek.map((event) => <button key={event.id} onClick={() => openEvent(event)} aria-label={event.title}><img src={eventImageSrc(event.image)} alt="" /><span>{event.day}</span><strong>{event.title}</strong><small>{event.time}</small></button>)}</div>}</section><div className="fridge-note"><Printer size={19} /><span><strong>Print My Week</strong> makes a big, simple schedule with pictures and room for notes.</span></div></section>
+    return <section className="screen week-screen"><div className="welcome-row"><div><p className="eyebrow">MY WEEK</p><h1>My plans</h1><p>Your confirmed event is big and clear.</p></div><button className="print-button" onClick={() => window.print()}><Printer size={20} />Print My Week</button></div><div className="week-list">{savedEvents.map((event) => { const weekday = getWeekdayName(event.date); return <article key={event.id} className="week-card confirmed-plan"><div className="date-box"><strong>{weekday.slice(0, 3)}</strong><span>{event.time.slice(0, 5)}</span></div><img src={eventImageSrc(event.image)} alt="" /><div><span className="confirmed-label">✓ You are going</span><h2>{event.title}</h2>{event.bus && <p><Bus size={16} />{event.bus}</p>}{event.support && <p><Heart size={16} />{event.support}</p>}</div><StatusBadge state={event.registration} /><ListenButton text={event.title + (weekday ? '. ' + weekday : '') + '. ' + event.time + (event.bus ? '. ' + event.bus : '')} label={event.title} slow={slow} /></article> })}</div><section className="calendar-background"><p className="eyebrow">OTHER KW HAB EVENTS THIS WEEK</p>{otherEventsThisWeek.length === 0 ? <EmptyState mode={mode} pecs={pecs} language={language} slow={slow} /> : <div>{otherEventsThisWeek.map((event) => <button key={event.id} onClick={() => openEvent(event)} aria-label={event.title}><img src={eventImageSrc(event.image)} alt="" />{getWeekdayName(event.date) && <span>{getWeekdayName(event.date)}</span>}<strong>{event.title}</strong><small>{event.time}</small></button>)}</div>}</section><div className="fridge-note"><Printer size={19} /><span><strong>Print My Week</strong> makes a big, simple schedule with pictures and room for notes.</span></div></section>
   }
 
   const renderCalendar = () => {
     const thisWeekEvents = events.filter((event) => isDateInCurrentWeek(event.date))
-    return <section className="screen all-events-screen"><div className="welcome-row"><div><p className="eyebrow">KW HABILITATION</p><h1>All events</h1><p>Every community opportunity this week.</p></div><button className="print-button" onClick={() => window.print()}><Printer size={20} />Print calendar</button></div>{thisWeekEvents.length === 0 ? <EmptyState mode={mode} pecs={pecs} language={language} slow={slow} /> : <div className="full-calendar" aria-label="KW Habilitation events calendar">{['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => <section key={day}><h2>{day}</h2>{calendarExtras.filter((event) => event.day === day).map((event) => <article key={event.title} className="calendar-event prototype"><span>{event.icon}</span><div><strong>{event.title}</strong><small>{event.time} · {event.place}</small><em>{event.type}</em></div><button onClick={() => setTab('support')} aria-label={'Ask about ' + event.title}>Ask</button></article>)}{thisWeekEvents.filter((event) => event.day.startsWith(day)).map((event) => <button key={event.id} className={'calendar-event real' + (saved.includes(event.id) ? ' confirmed' : '')} onClick={() => openEvent(event)} aria-label={'Open ' + event.title}><img src={eventImageSrc(event.image)} alt="" /><div><strong>{saved.includes(event.id) && '✓ '}{event.title}</strong><small>{event.time} · {event.place}</small><em>{event.category}</em></div></button>)}</section>)}</div>}</section>
+    return <section className="screen all-events-screen"><div className="welcome-row"><div><p className="eyebrow">KW HABILITATION</p><h1>All events</h1><p>Every community opportunity this week.</p></div><button className="print-button" onClick={() => window.print()}><Printer size={20} />Print calendar</button></div>{eventsError ? <p role="alert" className="events-error">We couldn't load events right now. Please try again soon.</p> : thisWeekEvents.length === 0 ? <EmptyState mode={mode} pecs={pecs} language={language} slow={slow} /> : <div className="full-calendar" aria-label="KW Habilitation events calendar">{['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => <section key={day}><h2>{day}</h2>{thisWeekEvents.filter((event) => getWeekdayName(event.date) === day).map((event) => <button key={event.id} className={'calendar-event real' + (saved.includes(event.id) ? ' confirmed' : '')} onClick={() => openEvent(event)} aria-label={'Open ' + event.title}><img src={eventImageSrc(event.image)} alt="" /><div><strong>{saved.includes(event.id) && '✓ '}{event.title}</strong><small>{event.time} · {event.place}</small><em>{event.category}</em></div></button>)}</section>)}</div>}</section>
   }
 
   const renderSupport = () => about ? <AboutKWHab onBack={() => setAbout(false)} slow={slow} language={language} /> : <section className="screen support-screen"><div className="welcome-row"><div><p className="eyebrow">SUPPORT</p><h1>What help would be useful?</h1><p>Pick one kind of help. A staff person will talk with you.</p></div><ListenButton text="What help would be useful? Pick one kind of help. A staff person will talk with you." label="support options" slow={slow} /></div><div className="support-grid">{supportCards.map(([Icon, title, detail, staff, status]) => <article key={title}><div className="support-icon"><Icon size={30} /></div><h2>{title}</h2><p>{detail}</p><span>{staff}</span><small>{status}</small><button onClick={() => setRequested(title)}>{requested === title ? <Check size={18} /> : <Phone size={18} />}{requested === title ? 'Help request sent' : 'Ask for help'}</button></article>)}</div><section className="belonging-tap"><strong>🟡 BELONGING TAP</strong><h2>Tap a poster to find events.</h2><p>No app. No account. Just tap.</p><p>📚 Libraries · 🏥 Hospitals · 🚌 Bus stations · 🏠 Group homes</p><button>See where posters are →</button></section><section className="about-preview"><h2>About KW Habilitation</h2><p>We help people of all abilities live, work, and belong.</p><button onClick={() => setAbout(true)}>Learn more →</button></section><p className="support-footer"><CircleHelp size={18} />This is a request, not a booking. Staff will confirm what is possible.</p></section>

@@ -9,7 +9,7 @@ afterEach(cleanup)
 afterEach(() => { vi.restoreAllMocks() })
 
 const sampleEvent: Event = {
-  id: 'event-1', title: 'Community Art Afternoon', category: 'Art', day: 'Wednesday', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
+  id: 'event-1', title: 'Community Art Afternoon', category: 'Art', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
   support: 'Staff support available', registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register',
@@ -22,7 +22,6 @@ const sampleEvent: Event = {
 async function fillMinimumRequiredFields(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Event name'), 'Community Art Afternoon')
   await user.selectOptions(screen.getByLabelText('Category'), 'Art')
-  await user.type(screen.getByLabelText('Day'), 'Wednesday')
   const dateField = screen.getByLabelText('Date')
   await user.clear(dateField)
   await user.type(dateField, '2026-08-12')

@@ -15,3 +15,12 @@ export function isDateInCurrentWeek(dateStr: string, now: Date = new Date()): bo
   const { start, end } = getCurrentWeekRange(now)
   return eventDate >= start && eventDate <= end
 }
+
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+export function getWeekdayName(dateStr: string): string {
+  if (!dateStr.trim()) return ''
+  const date = new Date(dateStr + 'T00:00:00')
+  if (Number.isNaN(date.getTime())) return ''
+  return WEEKDAY_NAMES[date.getDay()]
+}

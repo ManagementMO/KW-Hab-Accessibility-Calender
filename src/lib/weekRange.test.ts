@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getCurrentWeekRange, isDateInCurrentWeek } from './weekRange'
+import { getCurrentWeekRange, getWeekdayName, isDateInCurrentWeek } from './weekRange'
 
 const thursday = new Date(2026, 7, 6, 14, 30) // Thursday, August 6 2026
 const sunday = new Date(2026, 7, 9, 9, 0) // Sunday, August 9 2026 (end of the same week)
@@ -51,5 +51,18 @@ describe('isDateInCurrentWeek', () => {
 
   it('recomputes from the real current date when no date is injected', () => {
     expect(isDateInCurrentWeek(localDateString(new Date()))).toBe(true)
+  })
+})
+
+describe('getWeekdayName', () => {
+  it('derives the correct weekday name from a date string', () => {
+    expect(getWeekdayName('2026-08-03')).toBe('Monday')
+    expect(getWeekdayName('2026-08-06')).toBe('Thursday')
+    expect(getWeekdayName('2026-08-09')).toBe('Sunday')
+  })
+
+  it('returns an empty string for an empty or invalid date', () => {
+    expect(getWeekdayName('')).toBe('')
+    expect(getWeekdayName('not-a-date')).toBe('')
   })
 })

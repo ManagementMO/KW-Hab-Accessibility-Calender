@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { eventInputToRow, rowToEvent } from './eventMapper.js'
 
 const COLUMNS = `
-  id, title, category, day, date, time, place, cost, bus, group_label, noise,
+  id, title, category, date, time, place, cost, bus, group_label, noise,
   access_status, access_owner, access_last_confirmed, access_note,
   support, registration, registration_url, image, reason, short, plain, host, arrival, journey, created_at, created_by
 `
@@ -27,7 +27,7 @@ export function insertEvent(db, input, staffId) {
   const createdAt = new Date().toISOString()
   const row = eventInputToRow(input, id, createdAt, staffId)
   db.prepare(`INSERT INTO events (${COLUMNS}) VALUES (
-    @id, @title, @category, @day, @date, @time, @place, @cost, @bus, @group_label, @noise,
+    @id, @title, @category, @date, @time, @place, @cost, @bus, @group_label, @noise,
     @access_status, @access_owner, @access_last_confirmed, @access_note,
     @support, @registration, @registration_url, @image, @reason, @short, @plain, @host, @arrival, @journey, @created_at, @created_by
   )`).run(row)
@@ -37,7 +37,7 @@ export function insertEvent(db, input, staffId) {
 export function updateEvent(db, id, input, createdBy) {
   const row = eventInputToRow(input, id, null, createdBy)
   db.prepare(`UPDATE events SET
-    title=@title, category=@category, day=@day, date=@date, time=@time, place=@place, cost=@cost, bus=@bus, group_label=@group_label, noise=@noise,
+    title=@title, category=@category, date=@date, time=@time, place=@place, cost=@cost, bus=@bus, group_label=@group_label, noise=@noise,
     access_status=@access_status, access_owner=@access_owner, access_last_confirmed=@access_last_confirmed, access_note=@access_note,
     support=@support, registration=@registration, registration_url=@registration_url, image=@image, reason=@reason, short=@short, plain=@plain,
     host=@host, arrival=@arrival, journey=@journey

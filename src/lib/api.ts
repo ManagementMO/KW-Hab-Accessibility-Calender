@@ -12,7 +12,6 @@ export type Event = {
   id: string
   title: string
   category: string
-  day: string
   date: string
   time: string
   place: string

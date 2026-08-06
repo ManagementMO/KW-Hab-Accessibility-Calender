@@ -8,15 +8,13 @@ import type { Event } from './lib/api'
 afterEach(cleanup)
 afterEach(() => { localStorage.clear(); vi.restoreAllMocks() })
 
-const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
 function localDateString(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 function baseEvent(overrides: Partial<Event>): Event {
   return {
-    id: 'event', title: 'Event', category: 'Art', day: 'Monday', date: localDateString(new Date()), time: '9:00 AM', place: 'Hall',
+    id: 'event', title: 'Event', category: 'Art', date: localDateString(new Date()), time: '9:00 AM', place: 'Hall',
     cost: 'Free', bus: '', group: '', noise: '', access: { status: 'not_known', owner: 'me', lastConfirmed: '2026-08-01', note: '' },
     support: '', registration: 'Yes, just come', registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.', host: 'Host',
     arrival: [{ icon: '📍', title: 'Arrive', detail: 'Come in.', image: '' }], createdBy: 'staff-1',
@@ -45,7 +43,7 @@ describe('Belonging Loop accessible calendar', () => {
     const user = userEvent.setup()
     vi.spyOn(api, 'getSession').mockResolvedValue(null)
     vi.spyOn(api, 'getEvents').mockResolvedValue([{
-      id: 'nature', title: 'Accessible Nature Walk', category: 'Outdoors', day: 'Saturday', date: '2026-08-08', time: '10:00 AM - 11:30 AM',
+      id: 'nature', title: 'Accessible Nature Walk', category: 'Outdoors', date: '2026-08-08', time: '10:00 AM - 11:30 AM',
       place: 'Waterloo Park', cost: 'Free', bus: 'Route 7 stops nearby', group: 'Small group', noise: 'Quiet',
       access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Step-free path' },
       support: 'Mobility support can be requested', registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register/nature-walk',
@@ -148,7 +146,7 @@ describe('Belonging Loop accessible calendar', () => {
   it('lists only the staff member\'s own events on the staff screen and lets them edit one', async () => {
     const user = userEvent.setup()
     const myEvent = {
-      id: 'my-event-1', title: 'My Event', category: 'Art', day: 'Monday', date: '2026-08-10', time: '9:00 AM', place: 'Hall',
+      id: 'my-event-1', title: 'My Event', category: 'Art', date: '2026-08-10', time: '9:00 AM', place: 'Hall',
       cost: 'Free', bus: '', group: '', noise: '', access: { status: 'not_known' as const, owner: 'me', lastConfirmed: '2026-08-01', note: '' },
       support: '', registration: 'Yes, just come' as const, registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.', host: 'Me',
       arrival: [{ icon: '📍', title: 'Arrive', detail: 'Come in.', image: '' }], createdBy: 'staff-1',
@@ -169,10 +167,10 @@ describe('Belonging Loop accessible calendar', () => {
     const today = new Date()
     const farFuture = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30)
     const thisWeekEvent = baseEvent({
-      id: 'this-week', title: 'This Week Event', day: WEEKDAY_NAMES[today.getDay()], date: localDateString(today),
+      id: 'this-week', title: 'This Week Event', date: localDateString(today),
     })
     const otherWeekEvent = baseEvent({
-      id: 'other-week', title: 'Far Future Event', day: WEEKDAY_NAMES[farFuture.getDay()], date: localDateString(farFuture),
+      id: 'other-week', title: 'Far Future Event', date: localDateString(farFuture),
     })
     vi.spyOn(api, 'getSession').mockResolvedValue(null)
     vi.spyOn(api, 'getEvents').mockResolvedValue([thisWeekEvent, otherWeekEvent])
