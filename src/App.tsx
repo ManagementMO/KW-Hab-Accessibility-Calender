@@ -3,10 +3,10 @@ import {
   Accessibility, ArrowLeft, Bell, Bus, CalendarDays, Check, ChevronRight,
   CircleHelp, Clock3, Ear, Heart, Home, Image, MapPin, MessageCircle, Mic,
   Paintbrush, Pencil, Phone, Printer, Settings2, ShieldCheck,
-  Sparkles, Star, Users, Volume2, X,
+  Sparkles, Star, Trash2, Users, Volume2, X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { Event, getEvents, getMyEvents, getSession, logout as apiLogout } from './lib/api'
+import { deleteEvent as apiDeleteEvent, Event, getEvents, getMyEvents, getSession, logout as apiLogout } from './lib/api'
 import { formatAccessFact } from './lib/accessFact'
 import { eventImageSrc } from './lib/eventDisplay'
 import { CATEGORIES } from './lib/categories'
@@ -90,6 +90,8 @@ function App() {
   const [eventsError, setEventsError] = useState(false)
   const [myEvents, setMyEvents] = useState<Event[]>([])
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [saved, setSaved] = useState<string[]>(() => loadSaved())
   const [requested, setRequested] = useState<string | null>(null)
   const [accessibilityLens, setAccessibilityLens] = useState(false)
@@ -119,6 +121,19 @@ function App() {
     refreshEvents()
     refreshMyEvents()
     setEditingEvent(null)
+  }
+
+  const handleDeleteEvent = async (event: Event) => {
+    setDeleting(true)
+    try {
+      await apiDeleteEvent(event.id)
+      if (editingEvent?.id === event.id) setEditingEvent(null)
+      setConfirmingDeleteId(null)
+      await refreshEvents()
+      await refreshMyEvents()
+    } finally {
+      setDeleting(false)
+    }
   }
 
   useEffect(() => {
@@ -151,7 +166,7 @@ function App() {
       <button className="notification-button" onClick={() => setReminders(true)} aria-label="Reminder settings"><Bell size={22} /></button>
       {entry === 'staff'
         ? <button className="staff-entry" onClick={handleStaffLogout} aria-label="Log out of staff tools"><ArrowLeft size={20} /><span>Log out</span></button>
-        : <button className="staff-entry" onClick={() => setEntry('staff-login')} aria-label="Open staff tools"><Settings2 size={20} /><span>Staff</span></button>}
+        : <button className="staff-entry" onClick={() => setEntry('staff-login')} aria-label="Staff Login"><Settings2 size={20} /><span>Staff Login</span></button>}
     </header>
     {pecs && <div className="pecs-banner" role="status"><Image size={21} /><strong>PECS is ON</strong><span>Tap a picture.</span></div>}
     {mode === 'audio' && <div className="audio-banner"><Volume2 size={19} /><strong>Audio First</strong><span>Tap any speaker. Speech is slower.</span><button onClick={() => window.speechSynthesis?.cancel()} aria-label="Stop listening"><X size={16} /> Stop</button></div>}
@@ -189,7 +204,7 @@ function App() {
 
   const renderSupport = () => about ? <AboutKWHab onBack={() => setAbout(false)} slow={slow} language={language} /> : <section className="screen support-screen"><div className="welcome-row"><div><p className="eyebrow">SUPPORT</p><h1>What help would be useful?</h1><p>Pick one kind of help. A staff person will talk with you.</p></div><ListenButton text="What help would be useful? Pick one kind of help. A staff person will talk with you." label="support options" slow={slow} /></div><div className="support-grid">{supportCards.map(([Icon, title, detail, staff, status]) => <article key={title}><div className="support-icon"><Icon size={30} /></div><h2>{title}</h2><p>{detail}</p><span>{staff}</span><small>{status}</small><button onClick={() => setRequested(title)}>{requested === title ? <Check size={18} /> : <Phone size={18} />}{requested === title ? 'Help request sent' : 'Ask for help'}</button></article>)}</div><section className="belonging-tap"><strong>🟡 BELONGING TAP</strong><h2>Tap a poster to find events.</h2><p>No app. No account. Just tap.</p><p>📚 Libraries · 🏥 Hospitals · 🚌 Bus stations · 🏠 Group homes</p><button>See where posters are →</button></section><section className="about-preview"><h2>About KW Habilitation</h2><p>We help people of all abilities live, work, and belong.</p><button onClick={() => setAbout(true)}>Learn more →</button></section><p className="support-footer"><CircleHelp size={18} />This is a request, not a booking. Staff will confirm what is possible.</p></section>
 
-  const renderStaff = () => <section className="staff-screen"><header><div><p className="eyebrow">STAFF TOOLS · PROTOTYPE ONLY</p><h1>Event workspace</h1><p>Detailed tools stay separate from the participant calendar.</p></div></header><section className="my-events-panel"><h2>My events</h2><p>Events you created. You can only edit your own.</p>{myEvents.length === 0 ? <p className="my-events-empty">You haven't created any events yet.</p> : <ul className="my-events-list">{myEvents.map((event) => <li key={event.id}><span>{event.title}</span><button type="button" onClick={() => setEditingEvent(event)} disabled={editingEvent?.id === event.id}><Pencil size={15} />{editingEvent?.id === event.id ? 'Editing…' : 'Edit'}</button></li>)}</ul>}</section><div className="staff-grid"><article><h2>1. Event details</h2>{editingEvent && <p className="editing-banner">Editing "{editingEvent.title}" <button type="button" className="text-action" onClick={() => setEditingEvent(null)}>Cancel edit</button></p>}<EventForm key={editingEvent?.id ?? 'new'} event={editingEvent ?? undefined} onSaved={handleEventSaved} /></article><article><h2>2. Arrival and access</h2><p><Image size={18} />4 arrival photos ready</p><p><Check size={18} />Step-free path: reported Jul 10</p><p><CircleHelp size={18} />Quiet bench: confirmed by host</p><button>Update access facts</button></article><article><h2>3. Moderation queue</h2><p><MessageCircle size={18} />2 chat messages pending</p><p>"Is there a quiet room?" — J</p><p>"Can I bring my mom?" — A</p><button>Open moderation</button></article><article><h2>4. Support coordination</h2><p><Accessibility size={18} />Jordan: mobility support</p><p><Bus size={18} />Route 7 transport information</p><p><ShieldCheck size={18} />No support is assigned automatically</p><button>Review support requests</button></article></div><StaffOperations /></section>
+  const renderStaff = () => <section className="staff-screen"><header><div><p className="eyebrow">STAFF TOOLS · PROTOTYPE ONLY</p><h1>Event workspace</h1><p>Detailed tools stay separate from the participant calendar.</p></div></header><section className="my-events-panel"><h2>My events</h2><p>Events you created. You can only edit your own.</p>{myEvents.length === 0 ? <p className="my-events-empty">You haven't created any events yet.</p> : <ul className="my-events-list">{myEvents.map((event) => <li key={event.id}><span>{event.title}</span><div className="my-event-actions"><button type="button" onClick={() => setEditingEvent(event)} disabled={editingEvent?.id === event.id}><Pencil size={15} />{editingEvent?.id === event.id ? 'Editing…' : 'Edit'}</button>{confirmingDeleteId === event.id ? <span className="delete-confirm"><span>Delete this event?</span><button type="button" className="confirm-delete" onClick={() => handleDeleteEvent(event)} disabled={deleting} aria-label={'Confirm delete ' + event.title}>{deleting ? 'Deleting…' : 'Yes, delete'}</button><button type="button" onClick={() => setConfirmingDeleteId(null)} disabled={deleting} aria-label={'Cancel delete ' + event.title}>Cancel</button></span> : <button type="button" className="delete-event" onClick={() => setConfirmingDeleteId(event.id)} aria-label={'Delete ' + event.title}><Trash2 size={15} />Delete</button>}</div></li>)}</ul>}</section><div className="staff-grid"><article><h2>1. Event details</h2>{editingEvent && <p className="editing-banner">Editing "{editingEvent.title}" <button type="button" className="text-action" onClick={() => setEditingEvent(null)}>Cancel edit</button></p>}<EventForm key={editingEvent?.id ?? 'new'} event={editingEvent ?? undefined} onSaved={handleEventSaved} /></article><article><h2>2. Arrival and access</h2><p><Image size={18} />4 arrival photos ready</p><p><Check size={18} />Step-free path: reported Jul 10</p><p><CircleHelp size={18} />Quiet bench: confirmed by host</p><button>Update access facts</button></article><article><h2>3. Moderation queue</h2><p><MessageCircle size={18} />2 chat messages pending</p><p>"Is there a quiet room?" — J</p><p>"Can I bring my mom?" — A</p><button>Open moderation</button></article><article><h2>4. Support coordination</h2><p><Accessibility size={18} />Jordan: mobility support</p><p><Bus size={18} />Route 7 transport information</p><p><ShieldCheck size={18} />No support is assigned automatically</p><button>Review support requests</button></article></div><StaffOperations /></section>
 
   if (entry === 'checking') return <div className="app-shell loading-shell"><p>Loading…</p></div>
   if (entry === 'staff-login') return <StaffLogin onSuccess={() => setEntry('staff')} onBack={() => setEntry('participant')} />

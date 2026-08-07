@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { eventInputToRow, rowToEvent, validateEventInput } from './eventMapper.js'
 
 const sampleInput = {
-  title: 'Community Art Afternoon', category: 'Art', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
+  title: 'Community Art Afternoon', category: 'Art', date: '2026-08-12', time: '2:00 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
   support: 'Staff support available', registration: 'Yes, just come', registrationUrl: '', image: 'https://example.com/a.jpg',
@@ -102,5 +102,17 @@ describe('validateEventInput', () => {
   it('flags a date that is not in YYYY-MM-DD format', () => {
     const errors = validateEventInput({ ...sampleInput, date: '08/12/2026' })
     expect(errors).toContain('date must be in YYYY-MM-DD format')
+  })
+
+  it('accepts valid 12-hour times at the boundaries, including noon and midnight', () => {
+    for (const time of ['12:00 AM', '12:00 PM', '1:00 AM', '11:59 PM', '9:05 am', '09:05 PM']) {
+      expect(validateEventInput({ ...sampleInput, time })).toEqual([])
+    }
+  })
+
+  it('flags a time that is not a valid 12-hour time', () => {
+    for (const time of ['13:00 PM', '0:30 AM', '2:75 PM', '9:00', '2:00 PM - 3:30 PM', 'noon']) {
+      expect(validateEventInput({ ...sampleInput, time })).toContain('time must be a valid 12-hour time (e.g. "2:00 PM")')
+    }
   })
 })

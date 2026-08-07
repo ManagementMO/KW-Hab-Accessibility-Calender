@@ -64,6 +64,13 @@ export async function updateEvent(id: string, input: NewEventInput): Promise<Eve
   return parseJsonOrThrow(response)
 }
 
+export async function deleteEvent(id: string): Promise<void> {
+  const response = await fetch(`/api/events/${id}`, { method: 'DELETE' })
+  if (response.ok) return
+  const data = await response.json().catch(() => ({}))
+  throw new Error(data.error || `Request failed with status ${response.status}`)
+}
+
 export async function getMyEvents(): Promise<Event[]> {
   const response = await fetch('/api/events/mine')
   return parseJsonOrThrow(response)

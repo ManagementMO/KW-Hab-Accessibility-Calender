@@ -1,6 +1,7 @@
 const REQUIRED_FIELDS = ['title', 'category', 'time', 'place', 'cost', 'registration', 'plain', 'date', 'host']
 const OPTIONAL_TEXT_FIELDS = ['bus', 'group', 'noise', 'support', 'image', 'reason', 'short']
 const ACCESS_STATUSES = ['confirmed', 'reported', 'not_known']
+const TIME_PATTERN = /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$/i
 
 export function rowToEvent(row) {
   return {
@@ -80,6 +81,9 @@ export function validateEventInput(input) {
   }
   if (typeof input.date === 'string' && input.date.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(input.date.trim())) {
     errors.push('date must be in YYYY-MM-DD format')
+  }
+  if (typeof input.time === 'string' && input.time.trim() && !TIME_PATTERN.test(input.time.trim())) {
+    errors.push('time must be a valid 12-hour time (e.g. "2:00 PM")')
   }
   if (!input.access || typeof input.access !== 'object') {
     errors.push('access is required')

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createEvent, getEvents, getMyEvents, getSession, login, logout, updateEvent } from './api'
+import { createEvent, deleteEvent, getEvents, getMyEvents, getSession, login, logout, updateEvent } from './api'
 
 const sampleEvent = { id: '1', title: 'Test Event' }
 
@@ -54,6 +54,21 @@ describe('updateEvent', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => ({ error: 'You can only edit events you created' }) })
     vi.stubGlobal('fetch', fetchMock)
     await expect(updateEvent('1', {} as any)).rejects.toThrow('You can only edit events you created')
+  })
+})
+
+describe('deleteEvent', () => {
+  it('sends a DELETE request for the given event id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    await deleteEvent('1')
+    expect(fetchMock).toHaveBeenCalledWith('/api/events/1', { method: 'DELETE' })
+  })
+
+  it('throws the server error message on failure', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => ({ error: 'You can only delete events you created' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(deleteEvent('1')).rejects.toThrow('You can only delete events you created')
   })
 })
 

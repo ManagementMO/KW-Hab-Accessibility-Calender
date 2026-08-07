@@ -43,7 +43,7 @@ describe('Belonging Loop accessible calendar', () => {
     const user = userEvent.setup()
     vi.spyOn(api, 'getSession').mockResolvedValue(null)
     vi.spyOn(api, 'getEvents').mockResolvedValue([{
-      id: 'nature', title: 'Accessible Nature Walk', category: 'Outdoors', date: '2026-08-08', time: '10:00 AM - 11:30 AM',
+      id: 'nature', title: 'Accessible Nature Walk', category: 'Outdoors', date: '2026-08-08', time: '10:00 AM',
       place: 'Waterloo Park', cost: 'Free', bus: 'Route 7 stops nearby', group: 'Small group', noise: 'Quiet',
       access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Step-free path' },
       support: 'Mobility support can be requested', registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register/nature-walk',
@@ -115,8 +115,10 @@ describe('Belonging Loop accessible calendar', () => {
     vi.spyOn(api, 'getMyEvents').mockResolvedValue([])
     vi.spyOn(api, 'login').mockResolvedValue({ ok: true, email: 'staff@kwhab.ca' })
     render(<App />)
-    await user.click(await screen.findByRole('button', { name: /open staff tools/i }))
+    await user.click(await screen.findByRole('button', { name: /staff login/i }))
+    await user.clear(screen.getByLabelText(/email/i))
     await user.type(screen.getByLabelText(/email/i), 'staff@kwhab.ca')
+    await user.clear(screen.getByLabelText(/password/i))
     await user.type(screen.getByLabelText(/password/i), 'correct-password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
     expect(await screen.findByRole('heading', { name: 'Event workspace' })).toBeInTheDocument()
@@ -129,8 +131,10 @@ describe('Belonging Loop accessible calendar', () => {
     vi.spyOn(api, 'getEvents').mockResolvedValue([])
     vi.spyOn(api, 'login').mockRejectedValue(new Error('Incorrect email or password'))
     render(<App />)
-    await user.click(await screen.findByRole('button', { name: /open staff tools/i }))
+    await user.click(await screen.findByRole('button', { name: /staff login/i }))
+    await user.clear(screen.getByLabelText(/email/i))
     await user.type(screen.getByLabelText(/email/i), 'staff@kwhab.ca')
+    await user.clear(screen.getByLabelText(/password/i))
     await user.type(screen.getByLabelText(/password/i), 'wrong')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect email or password')
@@ -160,6 +164,52 @@ describe('Belonging Loop accessible calendar', () => {
     await user.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByLabelText('Event name')).toHaveValue('My Event')
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument()
+  })
+
+  it('deletes an event after confirming, and removes it from the my-events list', async () => {
+    const user = userEvent.setup()
+    const myEvent = {
+      id: 'my-event-1', title: 'My Event', category: 'Art', date: '2026-08-10', time: '9:00 AM', place: 'Hall',
+      cost: 'Free', bus: '', group: '', noise: '', access: { status: 'not_known' as const, owner: 'me', lastConfirmed: '2026-08-01', note: '' },
+      support: '', registration: 'Yes, just come' as const, registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.', host: 'Me',
+      arrival: [{ icon: '📍', title: 'Arrive', detail: 'Come in.', image: '' }], createdBy: 'staff-1',
+    }
+    vi.spyOn(api, 'getSession').mockResolvedValue({ ok: true, email: 'staff@kwhab.ca' })
+    vi.spyOn(api, 'getMyEvents').mockResolvedValueOnce([myEvent]).mockResolvedValue([])
+    vi.spyOn(api, 'getEvents').mockResolvedValue([])
+    const deleteSpy = vi.spyOn(api, 'deleteEvent').mockResolvedValue(undefined)
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Event workspace' })
+
+    expect(await screen.findByText('My Event')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Delete My Event' }))
+    expect(screen.getByText('Delete this event?')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Confirm delete My Event' }))
+
+    expect(deleteSpy).toHaveBeenCalledWith('my-event-1')
+    expect(await screen.findByText("You haven't created any events yet.")).toBeInTheDocument()
+  })
+
+  it('cancels a pending delete without calling the API', async () => {
+    const user = userEvent.setup()
+    const myEvent = {
+      id: 'my-event-1', title: 'My Event', category: 'Art', date: '2026-08-10', time: '9:00 AM', place: 'Hall',
+      cost: 'Free', bus: '', group: '', noise: '', access: { status: 'not_known' as const, owner: 'me', lastConfirmed: '2026-08-01', note: '' },
+      support: '', registration: 'Yes, just come' as const, registrationUrl: '', image: '', reason: '', short: '', plain: 'Plain text.', host: 'Me',
+      arrival: [{ icon: '📍', title: 'Arrive', detail: 'Come in.', image: '' }], createdBy: 'staff-1',
+    }
+    vi.spyOn(api, 'getSession').mockResolvedValue({ ok: true, email: 'staff@kwhab.ca' })
+    vi.spyOn(api, 'getMyEvents').mockResolvedValue([myEvent])
+    const deleteSpy = vi.spyOn(api, 'deleteEvent')
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Event workspace' })
+
+    await user.click(await screen.findByRole('button', { name: 'Delete My Event' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel delete My Event' }))
+
+    expect(screen.queryByText('Delete this event?')).not.toBeInTheDocument()
+    expect(screen.getByText('My Event')).toBeInTheDocument()
+    expect(deleteSpy).not.toHaveBeenCalled()
   })
 
   it('All events only shows events dated in the current calendar week, using the real system date', async () => {

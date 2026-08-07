@@ -10,16 +10,7 @@ Competition materials and competing strategy proposals for **Impact-a-thon 2026*
 
 **There is no application code here yet** — no build, test, or lint tooling exists. The repo holds the source PDFs and three strategy documents written *before* the build. If a prototype gets added, document its commands in this section.
 
-## Competition constraints that shape every technical decision
-
-- One working day: 11:00–17:00. Pitches start at 17:00.
-- Round 1 is a **60-second pitch with laptops closed. An open laptop during the pitch disqualifies the team.** Whatever the idea is, it has to survive being *spoken*. Anything that only exists as pixels is invisible in Round 1.
-- Top 6 advance to a 2.5-minute demo plus **1 minute of questions from the nonprofit itself** — not from engineers. Expect questions about consent, liability, staff workload, and who maintains it.
-- Judging is four equal 25% slices: problem fit · user & **demonstrated** accessibility · thinking & feasibility (*can KW Hab continue it?*) · originality in discovery **and** collaboration.
-- Two required deliverables: a **prototype** showing both (a) a community member discovering an event and (b) a nonprofit posting one; and a **handoff doc** covering built-vs-next, decisions and reasoning, what went unsolved, continuation stack/links, and accessibility addressed vs. still needing real-user testing.
-- Any medium is allowed — code, Figma, no-code. The bar is "a working piece of the right idea, built to high fidelity," not a finished product.
-
-## The live data — this repo's real asset
+# The live data — this repo's real asset
 
 The Belonging Collective calendar is a **Teamup** board (key `ksakacjdxmrwoqtzym`) embedded at `kwhab.ca/join-us/calendar-of-events/`. Its JSON API is **publicly readable with no auth or API key**. This is the single highest-leverage fact in the repo: any concept here can run on real live data with zero migration, and the numbers in a pitch can be true.
 

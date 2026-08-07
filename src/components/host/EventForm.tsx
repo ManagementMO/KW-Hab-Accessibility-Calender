@@ -7,18 +7,29 @@ import { CATEGORIES } from '../../lib/categories'
 const emptyArrivalStep: ArrivalStep = { icon: '', title: '', detail: '', image: '' }
 const emptyJourney: Journey = { route: '', leave: '', duration: '', steps: [''] }
 
-const initialForm = {
-  title: '', category: '', date: '', time: '', place: '', cost: '', bus: '',
-  group: '', noise: '', support: '', registration: 'Yes, just come' as Event['registration'], registrationUrl: '',
-  image: '', reason: '', short: '', plain: '', host: '',
-  accessStatus: 'reported' as 'confirmed' | 'reported' | 'not_known',
-  accessOwner: '', accessLastConfirmed: '', accessNote: '',
-  arrival: [{ ...emptyArrivalStep }] as ArrivalStep[],
-  includeJourney: false,
-  journey: { ...emptyJourney },
+const TIME_PATTERN = /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$/i
+
+function todayDateString(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
-type FormState = typeof initialForm
+function createInitialForm() {
+  return {
+    title: 'Weekly Art Circle', category: 'Art', date: todayDateString(), time: '2:00 PM', place: 'Victoria Hills Community Centre',
+    cost: 'Free', bus: 'Route 7 stops nearby', group: 'Small group', noise: 'Low noise', support: 'Staff support available on request',
+    registration: 'Yes, just come' as Event['registration'], registrationUrl: '',
+    image: '', reason: 'A relaxed, creative way to meet new people.', short: 'A relaxed art session open to all abilities.',
+    plain: 'We will paint and create art together. Staff are on hand to help with anything you need.', host: 'Priya, Program Coordinator',
+    accessStatus: 'reported' as 'confirmed' | 'reported' | 'not_known',
+    accessOwner: 'KW Hab staff', accessLastConfirmed: todayDateString(), accessNote: 'Step-free entrance from the parking lot.',
+    arrival: [{ ...emptyArrivalStep, title: 'Enter through the main doors', detail: 'The main entrance is flat and wheelchair accessible, right by the parking lot.' }] as ArrivalStep[],
+    includeJourney: false,
+    journey: { ...emptyJourney },
+  }
+}
+
+type FormState = ReturnType<typeof createInitialForm>
 
 function eventToForm(event: Event): FormState {
   return {
@@ -35,7 +46,7 @@ function eventToForm(event: Event): FormState {
 
 export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: Event) => void }) {
   const isEditing = Boolean(event)
-  const [form, setForm] = useState<FormState>(() => (event ? eventToForm(event) : initialForm))
+  const [form, setForm] = useState<FormState>(() => (event ? eventToForm(event) : createInitialForm()))
   const [errors, setErrors] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -61,6 +72,9 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
       ['access owner', form.accessOwner], ['access last confirmed', form.accessLastConfirmed],
     ]
     for (const [label, value] of required) if (!value.trim()) problems.push(`${label} is required`)
+    if (form.time.trim() && !TIME_PATTERN.test(form.time.trim())) {
+      problems.push('time must be a valid 12-hour time, e.g. "2:00 PM"')
+    }
     if (form.registration === 'Sign up first' && !form.registrationUrl.trim()) {
       problems.push('registration link is required when registration is "Sign up first"')
     }
@@ -88,7 +102,7 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
         journey: form.includeJourney ? form.journey : undefined,
       }
       const saved = isEditing && event ? await updateEvent(event.id, payload) : await createEvent(payload)
-      if (!isEditing) setForm(initialForm)
+      if (!isEditing) setForm(createInitialForm())
       setSuccess(true)
       onSaved(saved)
     } catch (err) {
@@ -108,7 +122,7 @@ export function EventForm({ event, onSaved }: { event?: Event; onSaved: (event: 
       </select>
     </label>
     <label>Date<input type="date" value={form.date} onChange={(event) => update('date', event.target.value)} /></label>
-    <label>Time<input value={form.time} onChange={(event) => update('time', event.target.value)} /></label>
+    <label>Time<input value={form.time} onChange={(event) => update('time', event.target.value)} placeholder="e.g. 2:00 PM" /></label>
     <label>Place<input value={form.place} onChange={(event) => update('place', event.target.value)} /></label>
     <label>Cost<input value={form.cost} onChange={(event) => update('cost', event.target.value)} /></label>
     <label>Bus (optional)<input value={form.bus} onChange={(event) => update('bus', event.target.value)} /></label>

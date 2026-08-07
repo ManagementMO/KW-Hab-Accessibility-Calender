@@ -7,7 +7,7 @@ import { createStaff } from './staffRepo.js'
 
 const SECRET = 'test-secret'
 const validEvent = {
-  title: 'Community Art Afternoon', category: 'Art', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
+  title: 'Community Art Afternoon', category: 'Art', date: '2026-08-12', time: '2:00 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
   support: 'Staff support available', registration: 'Yes, just come', image: 'https://example.com/a.jpg',
@@ -91,6 +91,14 @@ describe('app', () => {
     expect(res.body.error).toMatch(/registrationUrl/)
   })
 
+  it('rejects an event with a time that is not a valid 12-hour time', async () => {
+    const agent = request.agent(app)
+    await agent.post('/api/auth/login').send({ email: 'staff@kwhab.ca', password: 'correct-password' })
+    const res = await agent.post('/api/events').send({ ...validEvent, time: '2:00 PM - 3:30 PM' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/time/)
+  })
+
   it('GET /api/events/mine requires a session and returns only events created by that staff account', async () => {
     const unauthenticated = await request(app).get('/api/events/mine')
     expect(unauthenticated.status).toBe(401)
@@ -156,5 +164,37 @@ describe('app', () => {
     const res = await agent.patch(`/api/events/${created.body.id}`).send({ ...validEvent, title: '' })
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/title/)
+  })
+
+  it('DELETE /api/events/:id requires a session, returns 404 for an unknown id, and 403 for another staff member\'s event', async () => {
+    const agentA = request.agent(app)
+    await agentA.post('/api/auth/login').send({ email: 'staff@kwhab.ca', password: 'correct-password' })
+    const created = await agentA.post('/api/events').send(validEvent)
+
+    const unauthenticated = await request(app).delete(`/api/events/${created.body.id}`)
+    expect(unauthenticated.status).toBe(401)
+
+    const missing = await agentA.delete('/api/events/no-such-id')
+    expect(missing.status).toBe(404)
+
+    const agentB = request.agent(app)
+    await agentB.post('/api/auth/login').send({ email: 'other-staff@kwhab.ca', password: 'other-password' })
+    const forbidden = await agentB.delete(`/api/events/${created.body.id}`)
+    expect(forbidden.status).toBe(403)
+
+    const stillThere = await request(app).get('/api/events')
+    expect(stillThere.body).toHaveLength(1)
+  })
+
+  it('DELETE /api/events/:id removes the event when the owning staff member is authenticated', async () => {
+    const agent = request.agent(app)
+    await agent.post('/api/auth/login').send({ email: 'staff@kwhab.ca', password: 'correct-password' })
+    const created = await agent.post('/api/events').send(validEvent)
+
+    const res = await agent.delete(`/api/events/${created.body.id}`)
+    expect(res.status).toBe(204)
+
+    const list = await request(app).get('/api/events')
+    expect(list.body).toEqual([])
   })
 })

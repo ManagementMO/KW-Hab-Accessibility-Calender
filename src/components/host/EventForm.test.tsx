@@ -9,7 +9,7 @@ afterEach(cleanup)
 afterEach(() => { vi.restoreAllMocks() })
 
 const sampleEvent: Event = {
-  id: 'event-1', title: 'Community Art Afternoon', category: 'Art', date: '2026-08-12', time: '2:00 PM - 3:30 PM',
+  id: 'event-1', title: 'Community Art Afternoon', category: 'Art', date: '2026-08-12', time: '2:00 PM',
   place: 'Victoria Hills Centre', cost: 'Free', bus: 'Route 4 at the door', group: '12 people', noise: 'Low noise',
   access: { status: 'reported', owner: 'KW Hab staff', lastConfirmed: '2026-07-10', note: 'Indoor and step-free' },
   support: 'Staff support available', registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register',
@@ -20,34 +20,91 @@ const sampleEvent: Event = {
 }
 
 async function fillMinimumRequiredFields(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText('Event name'), 'Community Art Afternoon')
+  const nameField = screen.getByLabelText('Event name')
+  await user.clear(nameField)
+  await user.type(nameField, 'Community Art Afternoon')
   await user.selectOptions(screen.getByLabelText('Category'), 'Art')
   const dateField = screen.getByLabelText('Date')
   await user.clear(dateField)
   await user.type(dateField, '2026-08-12')
-  await user.type(screen.getByLabelText('Time'), '2:00 PM - 3:30 PM')
-  await user.type(screen.getByLabelText('Place'), 'Victoria Hills Centre')
-  await user.type(screen.getByLabelText('Cost'), 'Free')
-  await user.type(screen.getByLabelText('Plain-language description'), 'We will make art together.')
-  await user.type(screen.getByLabelText('Host'), 'Priya, Program Coordinator')
-  await user.type(screen.getByLabelText('Owner'), 'KW Hab staff')
+  const timeField = screen.getByLabelText('Time')
+  await user.clear(timeField)
+  await user.type(timeField, '2:00 PM')
+  const placeField = screen.getByLabelText('Place')
+  await user.clear(placeField)
+  await user.type(placeField, 'Victoria Hills Centre')
+  const costField = screen.getByLabelText('Cost')
+  await user.clear(costField)
+  await user.type(costField, 'Free')
+  const plainField = screen.getByLabelText('Plain-language description')
+  await user.clear(plainField)
+  await user.type(plainField, 'We will make art together.')
+  const hostField = screen.getByLabelText('Host')
+  await user.clear(hostField)
+  await user.type(hostField, 'Priya, Program Coordinator')
+  const ownerField = screen.getByLabelText('Owner')
+  await user.clear(ownerField)
+  await user.type(ownerField, 'KW Hab staff')
   const dateInput = screen.getByLabelText('Last confirmed')
   await user.clear(dateInput)
   await user.type(dateInput, '2026-07-10')
+  await user.clear(screen.getByLabelText('Bus (optional)'))
+  await user.clear(screen.getByLabelText('Note (optional)'))
   const step = screen.getByText('Arrival steps').closest('fieldset') as HTMLElement
-  await user.type(within(step).getByLabelText('Title'), 'Use the front door')
-  await user.type(within(step).getByLabelText('Detail'), 'The door has a flat entrance.')
+  const stepTitle = within(step).getByLabelText('Title')
+  await user.clear(stepTitle)
+  await user.type(stepTitle, 'Use the front door')
+  const stepDetail = within(step).getByLabelText('Detail')
+  await user.clear(stepDetail)
+  await user.type(stepDetail, 'The door has a flat entrance.')
 }
 
 describe('EventForm (create mode)', () => {
-  it('shows validation errors and does not submit when required fields are empty', async () => {
+  it('shows a validation error and does not submit when a required field is cleared', async () => {
     const user = userEvent.setup()
     const createEventSpy = vi.spyOn(api, 'createEvent')
     render(<EventForm onSaved={vi.fn()} />)
+    await user.clear(screen.getByLabelText('Event name'))
     await user.click(screen.getByRole('button', { name: /create event/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/title is required/i)
     expect(createEventSpy).not.toHaveBeenCalled()
   })
+
+  it('pre-fills the new-event form with submittable sample defaults', async () => {
+    const user = userEvent.setup()
+    const created = { id: 'new-1', title: 'Weekly Art Circle' }
+    vi.spyOn(api, 'createEvent').mockResolvedValue(created as any)
+    const onSaved = vi.fn()
+    render(<EventForm onSaved={onSaved} />)
+
+    expect(screen.getByLabelText('Event name')).not.toHaveValue('')
+    expect(screen.getByLabelText('Time')).not.toHaveValue('')
+    expect(screen.getByLabelText('Date')).not.toHaveValue('')
+
+    await user.click(screen.getByRole('button', { name: /create event/i }))
+
+    expect(await screen.findByText(/event created/i)).toBeInTheDocument()
+    expect(onSaved).toHaveBeenCalledWith(created)
+    const payload = (api.createEvent as any).mock.calls[0][0]
+    expect(payload.title.trim()).not.toBe('')
+    expect(payload.time.trim()).not.toBe('')
+    expect(payload.host.trim()).not.toBe('')
+  }, 15000)
+
+  it('rejects a time that is not a valid 12-hour time with an inline error', async () => {
+    const user = userEvent.setup()
+    const createEventSpy = vi.spyOn(api, 'createEvent')
+    render(<EventForm onSaved={vi.fn()} />)
+
+    await fillMinimumRequiredFields(user)
+    const timeField = screen.getByLabelText('Time')
+    await user.clear(timeField)
+    await user.type(timeField, '2:00 PM - 3:30 PM')
+    await user.click(screen.getByRole('button', { name: /create event/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/valid 12-hour time/i)
+    expect(createEventSpy).not.toHaveBeenCalled()
+  }, 15000)
 
   it('submits with only the required fields filled, deriving the arrival icon automatically', async () => {
     const user = userEvent.setup()
@@ -78,6 +135,8 @@ describe('EventForm (create mode)', () => {
     const user = userEvent.setup()
     render(<EventForm onSaved={vi.fn()} />)
     const step = screen.getByText('Arrival steps').closest('fieldset') as HTMLElement
+    await user.clear(within(step).getByLabelText('Title'))
+    await user.clear(within(step).getByLabelText('Detail'))
 
     expect(within(step).getByLabelText(/icon for this step: 📍/i)).toBeInTheDocument()
     await user.type(within(step).getByLabelText('Title'), 'Ramp entrance')

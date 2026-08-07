@@ -34,6 +34,10 @@ export function insertEvent(db, input, staffId) {
   return rowToEvent(row)
 }
 
+export function deleteEvent(db, id) {
+  db.prepare('DELETE FROM events WHERE id = ?').run(id)
+}
+
 export function updateEvent(db, id, input, createdBy) {
   const row = eventInputToRow(input, id, null, createdBy)
   db.prepare(`UPDATE events SET

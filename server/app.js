@@ -2,7 +2,7 @@ import cookieParser from 'cookie-parser'
 import express from 'express'
 import { signSession, verifyPassword, verifySession } from './auth.js'
 import { validateEventInput } from './eventMapper.js'
-import { getEventById, insertEvent, listEvents, listEventsByStaff, updateEvent } from './eventsRepo.js'
+import { deleteEvent, getEventById, insertEvent, listEvents, listEventsByStaff, updateEvent } from './eventsRepo.js'
 import { findStaffByEmail } from './staffRepo.js'
 
 const COOKIE_NAME = 'belonging_session'
@@ -63,6 +63,14 @@ export function createApp(db, secret) {
     const errors = validateEventInput(req.body || {})
     if (errors.length) return res.status(400).json({ error: errors.join('; ') })
     res.json(updateEvent(db, req.params.id, req.body, req.staff.staffId))
+  })
+
+  app.delete('/api/events/:id', requireStaff, (req, res) => {
+    const existing = getEventById(db, req.params.id)
+    if (!existing) return res.status(404).json({ error: 'Event not found' })
+    if (existing.createdBy !== req.staff.staffId) return res.status(403).json({ error: 'You can only delete events you created' })
+    deleteEvent(db, req.params.id)
+    res.status(204).end()
   })
 
   return app

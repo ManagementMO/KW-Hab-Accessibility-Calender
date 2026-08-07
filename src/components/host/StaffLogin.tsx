@@ -3,8 +3,8 @@ import { ArrowLeft, LogIn } from 'lucide-react'
 import { login } from '../../lib/api'
 
 export function StaffLogin({ onSuccess, onBack }: { onSuccess: (email: string) => void; onBack: () => void }) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState(import.meta.env.VITE_STAFF_EMAIL ?? '')
+  const [password, setPassword] = useState(import.meta.env.VITE_STAFF_PASSWORD ?? '')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 

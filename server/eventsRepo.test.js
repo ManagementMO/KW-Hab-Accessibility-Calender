@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { openDb } from './db.js'
-import { getEventById, insertEvent, listEvents, listEventsByStaff, updateEvent } from './eventsRepo.js'
+import { deleteEvent, getEventById, insertEvent, listEvents, listEventsByStaff, updateEvent } from './eventsRepo.js'
 
 const sampleInput = {
-  title: 'Music and Games Night', category: 'Music', date: '2026-08-14', time: '6:00 PM - 8:00 PM',
+  title: 'Music and Games Night', category: 'Music', date: '2026-08-14', time: '6:00 PM',
   place: 'Kitchener Community Hall', cost: '$5', bus: 'Route 8 until 9 PM', group: '20 people', noise: 'Moderate noise',
   access: { status: 'confirmed', owner: 'KW Hab staff', lastConfirmed: '2026-07-01', note: 'Ramp entrance' },
   support: 'Support people are free', registration: 'Sign up first', registrationUrl: 'https://kwhab.ca/register',
@@ -63,5 +63,14 @@ describe('eventsRepo', () => {
     expect(updated.place).toBe('New Venue')
     expect(updated.createdBy).toBe('staff-1')
     expect(listEvents(db)).toHaveLength(1)
+  })
+
+  it('deleteEvent removes the event so it no longer appears in listings', () => {
+    const db = openDb(':memory:')
+    const created = insertEvent(db, sampleInput, 'staff-1')
+    const other = insertEvent(db, { ...sampleInput, title: 'Second Event' }, 'staff-1')
+    deleteEvent(db, created.id)
+    expect(getEventById(db, created.id)).toBeNull()
+    expect(listEvents(db)).toEqual([other])
   })
 })
